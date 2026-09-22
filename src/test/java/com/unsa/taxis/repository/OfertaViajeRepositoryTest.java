@@ -1,5 +1,7 @@
 package com.unsa.taxis.repository;
 
+import org.springframework.test.annotation.DirtiesContext;
+import com.unsa.taxis.PostgresIntegrationTest;
 import org.springframework.transaction.annotation.Transactional;
 import com.unsa.taxis.model.*;
 import org.junit.jupiter.api.Test;
@@ -13,7 +15,8 @@ import java.time.temporal.ChronoUnit;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
-class OfertaViajeRepositoryTest {
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_CLASS)
+class OfertaViajeRepositoryTest extends PostgresIntegrationTest {
 
     @Autowired
     private OfertaViajeRepository ofertaViajeRepository;

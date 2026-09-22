@@ -1,6 +1,6 @@
-
 package com.unsa.taxis.service;
 
+import com.unsa.taxis.PostgresIntegrationTest;
 import com.unsa.taxis.model.Tarifa;
 import com.unsa.taxis.model.TipoTarifa;
 import org.junit.jupiter.api.Test;
@@ -12,8 +12,15 @@ import java.time.ZoneOffset;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import org.springframework.test.context.jdbc.Sql;
+
+@Sql(
+        scripts = "/db/tarifa-data.sql",
+        executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS
+)
+
 @SpringBootTest
-class TarifaServiceTest {
+class TarifaServiceTest extends PostgresIntegrationTest {
 
     @Autowired
     private TarifaService tarifaService;
