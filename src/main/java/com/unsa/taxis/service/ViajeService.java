@@ -8,6 +8,8 @@ import com.unsa.taxis.repository.ClienteRepository;
 import com.unsa.taxis.repository.ViajeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.unsa.taxis.mapper.ViajeMapper;
+import com.unsa.taxis.dto.ViajeResponse;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -21,8 +23,9 @@ public class ViajeService {
     private final ClienteRepository clienteRepository;
     private final TarifaService tarifaService;
     private final CalculadorCostoService calculadorCostoService;
+    private final ViajeMapper viajeMapper;
 
-    public Viaje crearViaje(CrearViajeRequest request) {
+    public ViajeResponse crearViaje(CrearViajeRequest request) {
 
         // 1. Buscar al cliente por su WhatsApp
         Cliente cliente = clienteRepository
@@ -64,16 +67,31 @@ public class ViajeService {
                 .costoEstimado(costoEstimado)
                 .build();
 
-        // 5. Guardar el viaje
-        return viajeRepository.save(viaje);
+        // 6. Guardar el viaje
+        Viaje viajeGuardado = viajeRepository.save(viaje);
+
+        //7. Retornar el dto
+        return viajeMapper.toResponse(viajeGuardado);
     }
 
-    public Viaje buscarPorId(Long id) {
+    public ViajeResponse buscarPorId(Long id) {
+
+        Viaje viaje = viajeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Viaje no encontrado"));
+
+        return viajeMapper.toResponse(viaje);
+    }
+
+    public Viaje buscarEntidadPorId(Long id) {
+
         return viajeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Viaje no encontrado"));
     }
 
-    public List<Viaje> listarTodos() {
-        return viajeRepository.findAll();
+    public List<ViajeResponse> listarTodos() {
+        return viajeRepository.findAll()
+                .stream()
+                .map(viajeMapper::toResponse)
+                .toList();
     }
 }

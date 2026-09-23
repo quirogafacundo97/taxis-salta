@@ -1,6 +1,8 @@
 package com.unsa.taxis.service;
 
 import com.unsa.taxis.dto.CrearViajeRequest;
+import com.unsa.taxis.dto.ViajeResponse;
+import com.unsa.taxis.mapper.ViajeMapper;
 import com.unsa.taxis.model.Cliente;
 import com.unsa.taxis.model.Tarifa;
 import com.unsa.taxis.model.TipoTarifa;
@@ -12,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -34,6 +37,9 @@ class ViajeServiceTest {
 
     @Mock
     private CalculadorCostoService calculadorCostoService;
+
+    @Mock
+    private ViajeMapper viajeMapper;
 
     @InjectMocks
     private ViajeService viajeService;
@@ -90,18 +96,27 @@ class ViajeServiceTest {
         when(viajeRepository.save(any(Viaje.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
+        ViajeResponse respuesta = ViajeResponse.builder()
+                .id(1L)
+                .clienteNombre("Juan")
+                .direccionOrigen("Av. Belgrano 1234, Salta")
+                .direccionDestino("Plaza 9 de Julio, Salta")
+                .tipoTarifa(TipoTarifa.NOCTURNA)
+                .costoEstimado(costoEstimado)
+                .build();
+
+        when(viajeMapper.toResponse(any(Viaje.class)))
+                .thenReturn(respuesta);
+
         // Ejecutamos el metodo REAL que estamos probando
-        Viaje resultado = viajeService.crearViaje(request);
+        ViajeResponse resultado = viajeService.crearViaje(request);
 
         // Verificaciones
         assertNotNull(resultado);
-        assertEquals(cliente, resultado.getCliente());
+        assertEquals(1L, resultado.getId());
+        assertEquals("Juan", resultado.getClienteNombre());
         assertEquals("Av. Belgrano 1234, Salta", resultado.getDireccionOrigen());
         assertEquals("Plaza 9 de Julio, Salta", resultado.getDireccionDestino());
-        assertEquals(-24.7885, resultado.getLatitudOrigen());
-        assertEquals(-65.4100, resultado.getLongitudOrigen());
-        assertEquals(-24.7875, resultado.getLatitudDestino());
-        assertEquals(-65.4105, resultado.getLongitudDestino());
         assertEquals(TipoTarifa.NOCTURNA, resultado.getTipoTarifa());
         assertEquals(new BigDecimal("1412.00"), resultado.getCostoEstimado());
 
@@ -122,6 +137,8 @@ class ViajeServiceTest {
 
         verify(viajeRepository)
                 .save(any(Viaje.class));
+
+        verify(viajeMapper).toResponse(any(Viaje.class));
 
         verify(clienteRepository, never())
                 .save(any(Cliente.class));
@@ -174,17 +191,26 @@ class ViajeServiceTest {
         when(viajeRepository.save(any(Viaje.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
+        // Simulamos la respuesta del mapper
+        ViajeResponse respuesta = ViajeResponse.builder()
+                .id(1L)
+                .clienteNombre("Carlos")
+                .direccionOrigen("Av. Belgrano 1234, Salta")
+                .direccionDestino("Plaza 9 de Julio, Salta")
+                .tipoTarifa(TipoTarifa.NOCTURNA)
+                .costoEstimado(costoEstimado)
+                .build();
+
+        when(viajeMapper.toResponse(any(Viaje.class)))
+                .thenReturn(respuesta);
+
         // Ejecutamos el servicio REAL
-        Viaje resultado = viajeService.crearViaje(request);
+        ViajeResponse resultado = viajeService.crearViaje(request);
 
         // Verificamos el resultado
         assertNotNull(resultado);
-        assertNotNull(resultado.getCliente());
-        assertEquals("5493875999999",
-                resultado.getCliente().getWhatsappId());
-        assertEquals("Carlos",
-                resultado.getCliente().getNombre());
-
+        assertEquals(1L, resultado.getId());
+        assertEquals("Carlos", resultado.getClienteNombre());
         assertEquals(new BigDecimal("1412.00"),
                 resultado.getCostoEstimado());
 
@@ -196,8 +222,23 @@ class ViajeServiceTest {
         verify(clienteRepository)
                 .save(any(Cliente.class));
 
-        // Verificamos que se guardó el viaje
+        // Verificamos que el viaje se guardó con el cliente correcto
+        ArgumentCaptor<Viaje> viajeCaptor =
+                ArgumentCaptor.forClass(Viaje.class);
+
         verify(viajeRepository)
-                .save(any(Viaje.class));
+                .save(viajeCaptor.capture());
+
+        Viaje viajeGuardado = viajeCaptor.getValue();
+
+        assertNotNull(viajeGuardado.getCliente());
+        assertEquals("5493875999999",
+                viajeGuardado.getCliente().getWhatsappId());
+        assertEquals("Carlos",
+                viajeGuardado.getCliente().getNombre());
+
+        // Verificamos la conversión a DTO
+        verify(viajeMapper)
+                .toResponse(any(Viaje.class));
     }
 }

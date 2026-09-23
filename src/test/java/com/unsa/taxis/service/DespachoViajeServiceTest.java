@@ -984,7 +984,7 @@ class DespachoViajeServiceTest {
     @Test
     void debeContinuarDespachoBuscandoElViajePorId() {
 
-        when(viajeService.buscarPorId(1L))
+        when(viajeService.buscarEntidadPorId(1L))
                 .thenReturn(viaje);
 
         when(ofertaViajeService.listarOfertasPorViaje(1L))
@@ -1004,7 +1004,7 @@ class DespachoViajeServiceTest {
         despachoViajeService.continuarDespacho(1L);
 
         verify(viajeService)
-                .buscarPorId(1L);
+                .buscarEntidadPorId(1L);
 
         verify(ofertaViajeService)
                 .crearOferta(viaje, chofer1);

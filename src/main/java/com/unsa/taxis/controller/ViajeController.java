@@ -1,6 +1,7 @@
 package com.unsa.taxis.controller;
 
 import com.unsa.taxis.dto.CrearViajeRequest;
+import com.unsa.taxis.dto.ViajeResponse;
 import com.unsa.taxis.model.Viaje;
 import com.unsa.taxis.service.ViajeService;
 import jakarta.validation.Valid;
@@ -19,10 +20,10 @@ public class ViajeController {
     private final ViajeService viajeService;
 
     @PostMapping
-    public ResponseEntity<Viaje> crearViaje(
+    public ResponseEntity<ViajeResponse> crearViaje(
             @Valid @RequestBody CrearViajeRequest request) {
 
-        Viaje viaje = viajeService.crearViaje(request);
+        ViajeResponse viaje = viajeService.crearViaje(request);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -30,7 +31,7 @@ public class ViajeController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Viaje> buscarPorId(@PathVariable Long id) {
+    public ResponseEntity<ViajeResponse> buscarPorId(@PathVariable Long id) {
 
         return ResponseEntity.ok(
                 viajeService.buscarPorId(id)
@@ -38,7 +39,7 @@ public class ViajeController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Viaje>> listarTodos() {
+    public ResponseEntity<List<ViajeResponse>> listarTodos() {
 
         return ResponseEntity.ok(
                 viajeService.listarTodos()

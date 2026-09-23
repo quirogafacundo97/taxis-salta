@@ -85,7 +85,7 @@ public class DespachoViajeService {
 
     public void continuarDespacho(Long viajeId) {
 
-        Viaje viaje = viajeService.buscarPorId(viajeId);
+        Viaje viaje = viajeService.buscarEntidadPorId(viajeId);
 
         continuarDespacho(viaje);
     }
