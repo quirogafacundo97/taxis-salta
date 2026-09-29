@@ -441,12 +441,19 @@ class OfertaViajeServiceTest {
         when(ofertaViajeRepository.findById(999L))
                 .thenReturn(Optional.empty());
 
-        assertThrows(
-                OfertaNoEncontradaException.class,
-                () -> ofertaViajeService.aceptarOferta(999L)
+        OfertaNoEncontradaException excepcion =
+                assertThrows(
+                        OfertaNoEncontradaException.class,
+                        () -> ofertaViajeService.aceptarOferta(999L)
+                );
+
+        assertEquals(
+                "No se encontró la oferta con id: 999",
+                excepcion.getMessage()
         );
 
-        verify(ofertaViajeRepository).findById(999L);
+        verify(ofertaViajeRepository)
+                .findById(999L);
     }
 
     @Test

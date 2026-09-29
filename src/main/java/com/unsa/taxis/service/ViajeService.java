@@ -1,5 +1,6 @@
 package com.unsa.taxis.service;
 
+import com.unsa.taxis.exception.ViajeNoEncontradoException;
 import com.unsa.taxis.dto.CrearViajeRequest;
 import com.unsa.taxis.model.Cliente;
 import com.unsa.taxis.model.Tarifa;
@@ -77,7 +78,7 @@ public class ViajeService {
     public ViajeResponse buscarPorId(Long id) {
 
         Viaje viaje = viajeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Viaje no encontrado"));
+                .orElseThrow(() -> new ViajeNoEncontradoException(id));
 
         return viajeMapper.toResponse(viaje);
     }
@@ -85,7 +86,7 @@ public class ViajeService {
     public Viaje buscarEntidadPorId(Long id) {
 
         return viajeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Viaje no encontrado"));
+                .orElseThrow(() -> new ViajeNoEncontradoException(id));
     }
 
     public List<ViajeResponse> listarTodos() {

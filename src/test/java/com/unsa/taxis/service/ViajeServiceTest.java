@@ -1,5 +1,6 @@
 package com.unsa.taxis.service;
 
+import com.unsa.taxis.exception.ViajeNoEncontradoException;
 import com.unsa.taxis.dto.CrearViajeRequest;
 import com.unsa.taxis.dto.ViajeResponse;
 import com.unsa.taxis.mapper.ViajeMapper;
@@ -240,5 +241,33 @@ class ViajeServiceTest {
         // Verificamos la conversión a DTO
         verify(viajeMapper)
                 .toResponse(any(Viaje.class));
+    }
+
+    @Test
+    void debeLanzarExcepcionCuandoNoExisteElViaje() {
+
+        // Simulamos que el viaje no existe
+        when(viajeRepository.findById(999L))
+                .thenReturn(Optional.empty());
+
+        // Ejecutamos el metodo y verificamos la excepción
+        ViajeNoEncontradoException excepcion =
+                assertThrows(
+                        ViajeNoEncontradoException.class,
+                        () -> viajeService.buscarPorId(999L)
+                );
+
+        // Verificamos el mensaje
+        assertEquals(
+                "No se encontró el viaje con id: 999",
+                excepcion.getMessage()
+        );
+
+        // Verificamos que efectivamente se consultó el repositorio
+        verify(viajeRepository)
+                .findById(999L);
+
+        // El mapper nunca debería ejecutarse
+        verifyNoInteractions(viajeMapper);
     }
 }
