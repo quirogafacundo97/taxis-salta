@@ -36,4 +36,18 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.NOT_FOUND)
                 .body(error);
     }
+
+    @ExceptionHandler(ChoferNoEncontradoException.class)
+    public ResponseEntity<ErrorResponse> manejarChoferNoEncontrado(
+            ChoferNoEncontradoException ex) {
+
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                ex.getMessage()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(error);
+    }
 }

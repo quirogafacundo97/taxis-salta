@@ -1,6 +1,7 @@
 package com.unsa.taxis.service;
 
 import com.unsa.taxis.dto.ChoferCercanoResponse;
+import com.unsa.taxis.exception.ChoferNoEncontradoException;
 import com.unsa.taxis.model.Chofer;
 import com.unsa.taxis.model.EstadoChofer;
 import com.unsa.taxis.repository.ChoferRepository;
@@ -27,7 +28,7 @@ public class ChoferService {
 
     public Chofer buscarPorId(Long id) {
         return choferRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Chofer no encontrado"));
+                .orElseThrow(() -> new ChoferNoEncontradoException(id));
     }
 
     public Chofer actualizarUbicacion(
@@ -36,7 +37,7 @@ public class ChoferService {
             Double longitud) {
 
         Chofer chofer = choferRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Chofer no encontrado"));
+                .orElseThrow(() -> new ChoferNoEncontradoException(id));
 
         chofer.setLatitud(latitud);
         chofer.setLongitud(longitud);
@@ -47,7 +48,7 @@ public class ChoferService {
     public Chofer cambiarEstado(Long id, EstadoChofer nuevoEstado) {
 
         Chofer chofer = choferRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Chofer no encontrado"));
+                .orElseThrow(() -> new ChoferNoEncontradoException(id));
 
         chofer.setEstado(nuevoEstado);
 
@@ -74,19 +75,9 @@ public class ChoferService {
             Double longitud,
             Double radioKm) {
 
-        List<Chofer> choferesDisponibles =
-                choferRepository.findByEstadoAndHabilitadoAmt(
-                        EstadoChofer.LIBRE,
-                        true
-                );
-
         double radioMetros = radioKm * 1000;
 
-        return choferesDisponibles.stream()
-                .filter(chofer ->
-                        chofer.getLatitud() != null
-                                && chofer.getLongitud() != null
-                )
+        return listarDisponibles().stream()
                 .map(chofer -> {
 
                     double distancia = calculadorDistanciaService
