@@ -1,12 +1,18 @@
 package com.unsa.taxis.service;
 
 import com.unsa.taxis.dto.ChoferCercanoResponse;
+import com.unsa.taxis.model.Chofer;
 import com.unsa.taxis.model.EstadoOferta;
 import com.unsa.taxis.model.OfertaViaje;
 import com.unsa.taxis.model.Viaje;
+import com.unsa.taxis.routing.RoutingException;
+import com.unsa.taxis.routing.RoutingService;
+import com.unsa.taxis.routing.RutaResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -23,6 +29,7 @@ public class DespachoViajeService {
     private final ChoferService choferService;
     private final OfertaViajeService ofertaViajeService;
     private final ViajeService viajeService;
+    private final RoutingService routingService;
 
     public void despacharViaje(Viaje viaje) {
 
@@ -33,9 +40,7 @@ public class DespachoViajeService {
         despacharNuevaRonda(viaje);
     }
 
-    private List<ChoferCercanoResponse> obtenerCandidatos(
-            Viaje viaje,
-            double radioKm) {
+    private List<ChoferConRuta> obtenerCandidatos(Viaje viaje, double radioKm) {
 
         List<ChoferCercanoResponse> choferesCercanos =
                 choferService.buscarChoferesCercanos(
@@ -52,12 +57,59 @@ public class DespachoViajeService {
                         .map(oferta -> oferta.getChofer().getId())
                         .collect(Collectors.toSet());
 
-        return choferesCercanos.stream()
-                .filter(chofer ->
-                        !choferesYaOfrecidos.contains(
-                                chofer.getChofer().getId()
+        List<ChoferConRuta> candidatosConRuta = new ArrayList<>();
+        List<ChoferConRuta> candidatosSinRuta = new ArrayList<>();
+
+        for (ChoferCercanoResponse choferCercano : choferesCercanos) {
+
+            Chofer chofer = choferCercano.getChofer();
+
+            if (choferesYaOfrecidos.contains(chofer.getId())) {
+                continue;
+            }
+
+            try {
+                RutaResponse ruta = routingService.calcularRuta(
+                        viaje.getLatitudOrigen(),
+                        viaje.getLongitudOrigen(),
+                        chofer.getLatitud(),
+                        chofer.getLongitud()
+                );
+
+                candidatosConRuta.add(
+                        new ChoferConRuta(
+                                chofer,
+                                choferCercano.getDistanciaMetros(),
+                                ruta.getDuracionSegundos()
                         )
-                )
+                );
+
+            } catch (RoutingException e) {
+
+                candidatosSinRuta.add(
+                        new ChoferConRuta(
+                                chofer,
+                                choferCercano.getDistanciaMetros(),
+                                null
+                        )
+                );
+            }
+        }
+
+        // Si al menos un chofer tiene ruta, usamos las rutas calculadas.
+        if (!candidatosConRuta.isEmpty()) {
+            return candidatosConRuta.stream()
+                    .sorted(Comparator.comparingDouble(
+                            candidato -> candidato.getDuracionSegundos()
+                    ))
+                    .toList();
+        }
+
+        // Si OSRM falló para todos, usamos Haversine como fallback.
+        return candidatosSinRuta.stream()
+                .sorted(Comparator.comparingDouble(
+                        ChoferConRuta::getDistanciaMetros
+                ))
                 .toList();
     }
 
@@ -92,7 +144,7 @@ public class DespachoViajeService {
 
     private void despacharNuevaRonda(Viaje viaje) {
 
-        List<ChoferCercanoResponse> candidatos =
+        List<ChoferConRuta> candidatos =
                 obtenerCandidatos(viaje, RADIO_INICIAL_KM);
 
         if (candidatos.isEmpty()) {
@@ -107,7 +159,7 @@ public class DespachoViajeService {
 
         candidatos.stream()
                 .limit(CHOFERES_POR_RONDA)
-                .map(ChoferCercanoResponse::getChofer)
+                .map(ChoferConRuta::getChofer)
                 .forEach(chofer ->
                         ofertaViajeService.crearOferta(viaje, chofer)
                 );

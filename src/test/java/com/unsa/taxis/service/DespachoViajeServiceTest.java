@@ -5,6 +5,9 @@ import com.unsa.taxis.model.Chofer;
 import com.unsa.taxis.model.EstadoOferta;
 import com.unsa.taxis.model.OfertaViaje;
 import com.unsa.taxis.model.Viaje;
+import com.unsa.taxis.routing.RoutingException;
+import com.unsa.taxis.routing.RoutingService;
+import com.unsa.taxis.routing.RutaResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,6 +30,9 @@ class DespachoViajeServiceTest {
     @Mock
     private ViajeService viajeService;
 
+    @Mock
+    private RoutingService routingService;
+
     private DespachoViajeService despachoViajeService;
 
     private Viaje viaje;
@@ -41,12 +47,12 @@ class DespachoViajeServiceTest {
     @BeforeEach
     void setUp() {
 
-        despachoViajeService =
-                new DespachoViajeService(
-                        choferService,
-                        ofertaViajeService,
-                        viajeService
-                );
+        despachoViajeService = new DespachoViajeService(
+                choferService,
+                ofertaViajeService,
+                viajeService,
+                routingService
+        );
 
         viaje = Viaje.builder()
                 .id(1L)
@@ -57,36 +63,55 @@ class DespachoViajeServiceTest {
         chofer1 = Chofer.builder()
                 .id(1L)
                 .nombre("Juan")
+                .latitud(-24.7830)
+                .longitud(-65.4120)
                 .build();
 
         chofer2 = Chofer.builder()
                 .id(2L)
                 .nombre("Pedro")
+                .latitud(-24.7840)
+                .longitud(-65.4110)
                 .build();
 
         chofer3 = Chofer.builder()
                 .id(3L)
                 .nombre("Carlos")
+                .latitud(-24.7850)
+                .longitud(-65.4100)
                 .build();
 
         chofer4 = Chofer.builder()
                 .id(4L)
                 .nombre("Luis")
+                .latitud(-24.7860)
+                .longitud(-65.4090)
                 .build();
 
         chofer5 = Chofer.builder()
                 .id(5L)
                 .nombre("Miguel")
+                .latitud(-24.7870)
+                .longitud(-65.4080)
                 .build();
 
         chofer6 = Chofer.builder()
                 .id(6L)
                 .nombre("Roberto")
+                .latitud(-24.7880)
+                .longitud(-65.4070)
                 .build();
+    }
+
+    private void configurarRutaMock() {
+        when(routingService.calcularRuta(
+                anyDouble(), anyDouble(), anyDouble(), anyDouble()
+        )).thenReturn(new RutaResponse(1000, 60));
     }
 
     @Test
     void debeCrearOfertasParaLosTresChoferesMasCercanos() {
+        configurarRutaMock();
 
         List<ChoferCercanoResponse> choferesCercanos = List.of(
 
@@ -137,6 +162,7 @@ class DespachoViajeServiceTest {
 
     @Test
     void debeCrearOfertasParaLosDosChoferesDisponibles() {
+        configurarRutaMock();
 
         List<ChoferCercanoResponse> choferesCercanos = List.of(
 
@@ -192,6 +218,7 @@ class DespachoViajeServiceTest {
 
     @Test
     void segundaRondaNoDebeOfrecerChoferesQueYaParticiparon() {
+        configurarRutaMock();
 
         List<ChoferCercanoResponse> choferesCercanos = List.of(
 
@@ -275,6 +302,7 @@ class DespachoViajeServiceTest {
 
     @Test
     void debeAmpliarRadioSiNoQuedanChoferesDisponiblesEnElRadioInicial() {
+        configurarRutaMock();
 
         List<ChoferCercanoResponse> choferesEnRadioInicial = List.of(
 
@@ -375,6 +403,7 @@ class DespachoViajeServiceTest {
 
     @Test
     void noDebeAmpliarRadioSiHayChoferesDisponiblesEnElRadioInicial() {
+        configurarRutaMock();
 
         List<ChoferCercanoResponse> choferesEnRadioInicial = List.of(
 
@@ -415,6 +444,7 @@ class DespachoViajeServiceTest {
 
     @Test
     void debeOfrecerHastaTresChoferesNuevosAlAmpliarRadio() {
+        configurarRutaMock();
 
         List<ChoferCercanoResponse> choferesEnRadioInicial = List.of(
                 ChoferCercanoResponse.builder()
@@ -495,6 +525,7 @@ class DespachoViajeServiceTest {
 
     @Test
     void debeAmpliarRadioHastaSeisKmSiNoHayChoferesNuevosEnCuatroKm() {
+        configurarRutaMock();
 
         List<ChoferCercanoResponse> choferesEnRadioInicial = List.of(
                 ChoferCercanoResponse.builder()
@@ -599,6 +630,7 @@ class DespachoViajeServiceTest {
 
     @Test
     void debeCrearNuevaRondaCuandoTodasLasOfertasTerminaron() {
+        configurarRutaMock();
 
         List<ChoferCercanoResponse> choferesCercanos = List.of(
 
@@ -724,6 +756,7 @@ class DespachoViajeServiceTest {
 
     @Test
     void continuarDespachoDebeAmpliarRadioDeDosAKuatroKm() {
+        configurarRutaMock();
 
         OfertaViaje oferta1 = OfertaViaje.builder()
                 .id(1L)
@@ -817,6 +850,7 @@ class DespachoViajeServiceTest {
 
     @Test
     void continuarDespachoDebeAmpliarRadioHastaSeisKm() {
+        configurarRutaMock();
 
         OfertaViaje oferta1 = OfertaViaje.builder()
                 .id(1L)
@@ -983,6 +1017,7 @@ class DespachoViajeServiceTest {
 
     @Test
     void debeContinuarDespachoBuscandoElViajePorId() {
+        configurarRutaMock();
 
         when(viajeService.buscarEntidadPorId(1L))
                 .thenReturn(viaje);
@@ -1009,5 +1044,34 @@ class DespachoViajeServiceTest {
         verify(ofertaViajeService)
                 .crearOferta(viaje, chofer1);
     }
+
+    @Test
+    void deberiaUsarHaversineSiOsrmFallaParaTodosLosChoferes() {
+
+        when(choferService.buscarChoferesCercanos(
+                viaje.getLatitudOrigen(),
+                viaje.getLongitudOrigen(),
+                2.0
+        )).thenReturn(List.of(
+                new ChoferCercanoResponse(chofer1, 20.0),
+                new ChoferCercanoResponse(chofer2, 150.0),
+                new ChoferCercanoResponse(chofer3, 300.0)
+        ));
+
+        when(ofertaViajeService.listarOfertasPorViaje(viaje.getId()))
+                .thenReturn(List.of());
+
+        when(routingService.calcularRuta(
+                anyDouble(), anyDouble(), anyDouble(), anyDouble()
+        )).thenThrow(new RoutingException("OSRM no disponible"));
+
+        despachoViajeService.despacharViaje(viaje);
+
+        verify(ofertaViajeService).crearOferta(viaje, chofer1);
+        verify(ofertaViajeService).crearOferta(viaje, chofer2);
+        verify(ofertaViajeService).crearOferta(viaje, chofer3);
+    }
+
+
 }
 

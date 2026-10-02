@@ -1,13 +1,11 @@
 package com.unsa.taxis.service;
 
+import com.unsa.taxis.exception.TransicionEstadoViajeException;
 import com.unsa.taxis.exception.ViajeNoEncontradoException;
 import com.unsa.taxis.dto.CrearViajeRequest;
 import com.unsa.taxis.dto.ViajeResponse;
 import com.unsa.taxis.mapper.ViajeMapper;
-import com.unsa.taxis.model.Cliente;
-import com.unsa.taxis.model.Tarifa;
-import com.unsa.taxis.model.TipoTarifa;
-import com.unsa.taxis.model.Viaje;
+import com.unsa.taxis.model.*;
 import com.unsa.taxis.repository.ClienteRepository;
 import com.unsa.taxis.repository.ViajeRepository;
 import org.junit.jupiter.api.Test;
@@ -269,5 +267,64 @@ class ViajeServiceTest {
 
         // El mapper nunca debería ejecutarse
         verifyNoInteractions(viajeMapper);
+    }
+
+    @Test
+    void debeIniciarViajeCuandoEstaAceptado() {
+
+        Viaje viaje = Viaje.builder()
+                .id(1L)
+                .estado(EstadoViaje.ACEPTADO)
+                .build();
+
+        when(viajeRepository.findById(1L))
+                .thenReturn(Optional.of(viaje));
+
+        viajeService.iniciarViaje(1L);
+
+        assertEquals(
+                EstadoViaje.EN_CURSO,
+                viaje.getEstado()
+        );
+
+        verify(viajeRepository)
+                .findById(1L);
+
+        verify(viajeRepository)
+                .save(viaje);
+    }
+
+    @Test
+    void noDebeIniciarViajeCuandoNoEstaAceptado() {
+
+        Viaje viaje = Viaje.builder()
+                .id(1L)
+                .estado(EstadoViaje.SOLICITADO)
+                .build();
+
+        when(viajeRepository.findById(1L))
+                .thenReturn(Optional.of(viaje));
+
+        TransicionEstadoViajeException excepcion =
+                assertThrows(
+                        TransicionEstadoViajeException.class,
+                        () -> viajeService.iniciarViaje(1L)
+                );
+
+        assertEquals(
+                "No se puede iniciar el viaje porque no está aceptado",
+                excepcion.getMessage()
+        );
+
+        assertEquals(
+                EstadoViaje.SOLICITADO,
+                viaje.getEstado()
+        );
+
+        verify(viajeRepository)
+                .findById(1L);
+
+        verify(viajeRepository, never())
+                .save(any(Viaje.class));
     }
 }

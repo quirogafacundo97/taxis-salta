@@ -1,8 +1,10 @@
 package com.unsa.taxis.service;
 
+import com.unsa.taxis.exception.TransicionEstadoViajeException;
 import com.unsa.taxis.exception.ViajeNoEncontradoException;
 import com.unsa.taxis.dto.CrearViajeRequest;
 import com.unsa.taxis.model.Cliente;
+import com.unsa.taxis.model.EstadoViaje;
 import com.unsa.taxis.model.Tarifa;
 import com.unsa.taxis.model.Viaje;
 import com.unsa.taxis.repository.ClienteRepository;
@@ -87,6 +89,21 @@ public class ViajeService {
 
         return viajeRepository.findById(id)
                 .orElseThrow(() -> new ViajeNoEncontradoException(id));
+    }
+
+    public void iniciarViaje(Long viajeId) {
+
+        Viaje viaje = buscarEntidadPorId(viajeId);
+
+        if (viaje.getEstado() != EstadoViaje.ACEPTADO) {
+            throw new TransicionEstadoViajeException(
+                    "No se puede iniciar el viaje porque no está aceptado"
+            );
+        }
+
+        viaje.setEstado(EstadoViaje.EN_CURSO);
+
+        viajeRepository.save(viaje);
     }
 
     public List<ViajeResponse> listarTodos() {

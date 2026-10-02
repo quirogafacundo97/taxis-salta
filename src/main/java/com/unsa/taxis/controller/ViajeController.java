@@ -2,7 +2,6 @@ package com.unsa.taxis.controller;
 
 import com.unsa.taxis.dto.CrearViajeRequest;
 import com.unsa.taxis.dto.ViajeResponse;
-import com.unsa.taxis.model.Viaje;
 import com.unsa.taxis.service.ViajeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -44,5 +43,13 @@ public class ViajeController {
         return ResponseEntity.ok(
                 viajeService.listarTodos()
         );
+    }
+
+    @PutMapping("/{id}/iniciar")
+    public ResponseEntity<Void> iniciarViaje(@PathVariable Long id) {
+
+        viajeService.iniciarViaje(id);
+
+        return ResponseEntity.noContent().build();
     }
 }
