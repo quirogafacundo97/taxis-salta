@@ -46,4 +46,28 @@ class ViajeControllerTest {
 
         verify(viajeService).iniciarViaje(1L);
     }
+
+    @Test
+    void debeFinalizarViajeCorrectamente() throws Exception {
+
+        mockMvc.perform(
+                        put("/api/viajes/1/finalizar")
+                )
+                .andExpect(status().isNoContent());
+
+        verify(viajeService)
+                .finalizarViaje(1L);
+    }
+
+    @Test
+    void debeCancelarViajeCorrectamente() throws Exception {
+
+        mockMvc.perform(
+                        put("/api/viajes/1/cancelar")
+                )
+                .andExpect(status().isNoContent());
+
+        verify(viajeService)
+                .cancelarViaje(1L);
+    }
 }

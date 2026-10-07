@@ -3,10 +3,7 @@ package com.unsa.taxis.service;
 import com.unsa.taxis.exception.TransicionEstadoViajeException;
 import com.unsa.taxis.exception.ViajeNoEncontradoException;
 import com.unsa.taxis.dto.CrearViajeRequest;
-import com.unsa.taxis.model.Cliente;
-import com.unsa.taxis.model.EstadoViaje;
-import com.unsa.taxis.model.Tarifa;
-import com.unsa.taxis.model.Viaje;
+import com.unsa.taxis.model.*;
 import com.unsa.taxis.repository.ClienteRepository;
 import com.unsa.taxis.repository.ViajeRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +24,7 @@ public class ViajeService {
     private final TarifaService tarifaService;
     private final CalculadorCostoService calculadorCostoService;
     private final ViajeMapper viajeMapper;
+    private final ChoferService choferService;
 
     public ViajeResponse crearViaje(CrearViajeRequest request) {
 
@@ -106,10 +104,58 @@ public class ViajeService {
         viajeRepository.save(viaje);
     }
 
+    public void finalizarViaje(Long viajeId) {
+        Viaje viaje = buscarEntidadPorId(viajeId);
+
+        if (viaje.getEstado() != EstadoViaje.EN_CURSO) {
+            throw new TransicionEstadoViajeException(
+                    "No se puede finalizar el viaje porque no está en curso"
+            );
+        }
+
+        viaje.setEstado(EstadoViaje.FINALIZADO);
+
+        choferService.cambiarEstado(
+                viaje.getChofer().getId(),
+                EstadoChofer.LIBRE
+        );
+
+        viajeRepository.save(viaje);
+    }
+
     public List<ViajeResponse> listarTodos() {
         return viajeRepository.findAll()
                 .stream()
                 .map(viajeMapper::toResponse)
                 .toList();
+    }
+
+    public void cancelarViaje(Long viajeId) {
+
+        Viaje viaje = buscarEntidadPorId(viajeId);
+
+        if (viaje.getEstado() != EstadoViaje.SOLICITADO) {
+
+            String motivo = switch (viaje.getEstado()) {
+                case ACEPTADO ->
+                        "el viaje ya fue aceptado por un chofer";
+                case EN_CURSO ->
+                        "el viaje ya está en curso";
+                case FINALIZADO ->
+                        "el viaje ya finalizó";
+                case CANCELADO ->
+                        "el viaje ya fue cancelado";
+                default ->
+                        "el estado actual del viaje no permite cancelarlo";
+            };
+
+            throw new TransicionEstadoViajeException(
+                    "No se puede cancelar el viaje porque " + motivo
+            );
+        }
+
+        viaje.setEstado(EstadoViaje.CANCELADO);
+
+        viajeRepository.save(viaje);
     }
 }

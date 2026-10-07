@@ -4,7 +4,6 @@ import com.unsa.taxis.model.Chofer;
 import com.unsa.taxis.model.EstadoOferta;
 import com.unsa.taxis.model.OfertaViaje;
 import com.unsa.taxis.model.Viaje;
-import com.unsa.taxis.service.DespachoViajeService;
 import com.unsa.taxis.service.OfertaViajeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,9 +21,6 @@ class OfertaViajeSchedulerTest {
     @Mock
     private OfertaViajeService ofertaViajeService;
 
-    @Mock
-    private DespachoViajeService despachoViajeService;
-
     private OfertaViajeScheduler scheduler;
 
     private Viaje viaje;
@@ -35,8 +31,7 @@ class OfertaViajeSchedulerTest {
     void setUp() {
 
         scheduler = new OfertaViajeScheduler(
-                ofertaViajeService,
-                despachoViajeService
+                ofertaViajeService
         );
 
         viaje = Viaje.builder()
@@ -61,13 +56,10 @@ class OfertaViajeSchedulerTest {
 
         verify(ofertaViajeService, never())
                 .vencerOferta(anyLong());
-
-        verify(despachoViajeService, never())
-                .continuarDespacho(anyLong());
     }
 
     @Test
-    void debeVencerLaOfertaYContinuarElDespacho() {
+    void debeVencerLasOfertasExpiradas() {
 
         OfertaViaje oferta = OfertaViaje.builder()
                 .id(1L)
@@ -83,13 +75,10 @@ class OfertaViajeSchedulerTest {
 
         verify(ofertaViajeService)
                 .vencerOferta(1L);
-
-        verify(despachoViajeService)
-                .continuarDespacho(1L);
     }
 
     @Test
-    void debeContinuarDespachoUnaSolaVezSiVariasOfertasPertenecenAlMismoViaje() {
+    void debeVencerTodasLasOfertasExpiradas() {
 
         OfertaViaje oferta1 = OfertaViaje.builder()
                 .id(1L)
@@ -129,47 +118,5 @@ class OfertaViajeSchedulerTest {
 
         verify(ofertaViajeService)
                 .vencerOferta(3L);
-
-        verify(despachoViajeService, times(1))
-                .continuarDespacho(1L);
-    }
-
-    @Test
-    void debeContinuarElDespachoDeCadaViajeUnaVez() {
-
-        Viaje viaje2 = Viaje.builder()
-                .id(2L)
-                .build();
-
-        OfertaViaje oferta1 = OfertaViaje.builder()
-                .id(1L)
-                .viaje(viaje)
-                .chofer(chofer)
-                .estado(EstadoOferta.PENDIENTE)
-                .build();
-
-        OfertaViaje oferta2 = OfertaViaje.builder()
-                .id(2L)
-                .viaje(viaje2)
-                .chofer(chofer)
-                .estado(EstadoOferta.PENDIENTE)
-                .build();
-
-        when(ofertaViajeService.listarOfertasExpiradas())
-                .thenReturn(List.of(oferta1, oferta2));
-
-        scheduler.procesarOfertasExpiradas();
-
-        verify(ofertaViajeService)
-                .vencerOferta(1L);
-
-        verify(ofertaViajeService)
-                .vencerOferta(2L);
-
-        verify(despachoViajeService)
-                .continuarDespacho(1L);
-
-        verify(despachoViajeService)
-                .continuarDespacho(2L);
     }
 }

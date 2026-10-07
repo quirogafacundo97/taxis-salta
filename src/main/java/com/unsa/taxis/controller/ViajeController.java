@@ -52,4 +52,18 @@ public class ViajeController {
 
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/{id}/finalizar")
+    public ResponseEntity<Void> finalizarViaje(@PathVariable Long id) {
+        viajeService.finalizarViaje(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/cancelar")
+    public ResponseEntity<Void> cancelarViaje(@PathVariable Long id) {
+
+        viajeService.cancelarViaje(id);
+
+        return ResponseEntity.noContent().build();
+    }
 }

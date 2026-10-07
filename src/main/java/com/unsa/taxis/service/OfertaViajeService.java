@@ -6,6 +6,10 @@ import com.unsa.taxis.model.*;
 import com.unsa.taxis.repository.OfertaViajeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import com.unsa.taxis.event.OfertaRechazadaEvent;
+import org.springframework.context.ApplicationEventPublisher;
+import com.unsa.taxis.event.OfertaVencidaEvent;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -17,6 +21,8 @@ public class OfertaViajeService {
     private static final long TIEMPO_EXPIRACION_SEGUNDOS = 10;
 
     private final OfertaViajeRepository ofertaViajeRepository;
+    private final ChoferService choferService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public OfertaViaje crearOferta(Viaje viaje, Chofer chofer) {
 
@@ -71,6 +77,7 @@ public class OfertaViajeService {
         }
     }
 
+    @Transactional
     public void aceptarOferta(Long ofertaId) {
 
         OfertaViaje oferta = ofertaViajeRepository.findById(ofertaId)
@@ -93,6 +100,11 @@ public class OfertaViajeService {
         viaje.setChofer(oferta.getChofer());
         viaje.setEstado(EstadoViaje.ACEPTADO);
 
+        choferService.cambiarEstado(
+                oferta.getChofer().getId(),
+                EstadoChofer.OCUPADO
+        );
+
         cancelarOtrasOfertasPendientes(
                 viaje,
                 oferta.getId()
@@ -113,6 +125,10 @@ public class OfertaViajeService {
         oferta.setEstado(EstadoOferta.RECHAZADA);
 
         ofertaViajeRepository.save(oferta);
+
+        eventPublisher.publishEvent(
+                new OfertaRechazadaEvent(oferta.getId())
+        );
     }
 
     public void vencerOferta(Long ofertaId) {
@@ -137,6 +153,17 @@ public class OfertaViajeService {
         oferta.setEstado(EstadoOferta.VENCIDA);
 
         ofertaViajeRepository.save(oferta);
+
+        eventPublisher.publishEvent(
+                new OfertaVencidaEvent(oferta.getId())
+        );
+    }
+
+    public OfertaViaje buscarPorId(Long ofertaId) {
+        return ofertaViajeRepository.findById(ofertaId)
+                .orElseThrow(() ->
+                        new OfertaNoEncontradaException(ofertaId)
+                );
     }
 
     public List<OfertaViaje> listarOfertasPorViaje(Long viajeId) {

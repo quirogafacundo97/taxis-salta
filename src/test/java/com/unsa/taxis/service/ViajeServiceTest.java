@@ -14,6 +14,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.ArgumentCaptor;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -43,6 +45,8 @@ class ViajeServiceTest {
     @InjectMocks
     private ViajeService viajeService;
 
+    @Mock
+    private ChoferService choferService;
 
     @Test
     void debeCrearViajeConClienteExistente() {
@@ -326,5 +330,175 @@ class ViajeServiceTest {
 
         verify(viajeRepository, never())
                 .save(any(Viaje.class));
+    }
+
+    @Test
+    void debeFinalizarViajeYLiberarChofer() {
+
+        Chofer chofer = Chofer.builder()
+                .id(1L)
+                .estado(EstadoChofer.OCUPADO)
+                .build();
+
+        Viaje viaje = Viaje.builder()
+                .id(1L)
+                .estado(EstadoViaje.EN_CURSO)
+                .chofer(chofer)
+                .build();
+
+        when(viajeRepository.findById(1L))
+                .thenReturn(Optional.of(viaje));
+
+        viajeService.finalizarViaje(1L);
+
+        assertEquals(
+                EstadoViaje.FINALIZADO,
+                viaje.getEstado()
+        );
+
+        assertEquals(
+                chofer,
+                viaje.getChofer()
+        );
+
+        verify(choferService)
+                .cambiarEstado(
+                        chofer.getId(),
+                        EstadoChofer.LIBRE
+                );
+
+        verify(viajeRepository)
+                .save(viaje);
+    }
+
+
+    @Test
+    void noDebeFinalizarViajeCuandoNoEstaEnCurso() {
+
+        Chofer chofer = Chofer.builder()
+                .id(1L)
+                .estado(EstadoChofer.OCUPADO)
+                .build();
+
+        Viaje viaje = Viaje.builder()
+                .id(1L)
+                .estado(EstadoViaje.ACEPTADO)
+                .chofer(chofer)
+                .build();
+
+        when(viajeRepository.findById(1L))
+                .thenReturn(Optional.of(viaje));
+
+        TransicionEstadoViajeException excepcion =
+                assertThrows(
+                        TransicionEstadoViajeException.class,
+                        () -> viajeService.finalizarViaje(1L)
+                );
+
+        assertEquals(
+                "No se puede finalizar el viaje porque no está en curso",
+                excepcion.getMessage()
+        );
+
+        assertEquals(
+                EstadoViaje.ACEPTADO,
+                viaje.getEstado()
+        );
+
+        verify(choferService, never())
+                .cambiarEstado(
+                        anyLong(),
+                        any(EstadoChofer.class)
+                );
+
+        verify(viajeRepository, never())
+                .save(any(Viaje.class));
+    }
+
+    @Test
+    void debeCancelarViajeCuandoEstaSolicitado() {
+
+        Viaje viaje = Viaje.builder()
+                .id(1L)
+                .estado(EstadoViaje.SOLICITADO)
+                .build();
+
+        when(viajeRepository.findById(1L))
+                .thenReturn(Optional.of(viaje));
+
+        viajeService.cancelarViaje(1L);
+
+        assertEquals(
+                EstadoViaje.CANCELADO,
+                viaje.getEstado()
+        );
+
+        verify(viajeRepository)
+                .findById(1L);
+
+        verify(viajeRepository)
+                .save(viaje);
+
+        verifyNoInteractions(choferService);
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = EstadoViaje.class,
+            names = {
+                    "ACEPTADO",
+                    "EN_CURSO",
+                    "FINALIZADO",
+                    "CANCELADO"
+            }
+    )
+    void noDebeCancelarViajeCuandoEstadoNoLoPermite(
+            EstadoViaje estado
+    ) {
+
+        Viaje viaje = Viaje.builder()
+                .id(1L)
+                .estado(estado)
+                .build();
+
+        when(viajeRepository.findById(1L))
+                .thenReturn(Optional.of(viaje));
+
+        TransicionEstadoViajeException excepcion =
+                assertThrows(
+                        TransicionEstadoViajeException.class,
+                        () -> viajeService.cancelarViaje(1L)
+                );
+
+        String mensajeEsperado = switch (estado) {
+            case ACEPTADO ->
+                    "No se puede cancelar el viaje porque el viaje ya fue aceptado por un chofer";
+            case EN_CURSO ->
+                    "No se puede cancelar el viaje porque el viaje ya está en curso";
+            case FINALIZADO ->
+                    "No se puede cancelar el viaje porque el viaje ya finalizó";
+            case CANCELADO ->
+                    "No se puede cancelar el viaje porque el viaje ya fue cancelado";
+            default ->
+                    throw new IllegalStateException("Estado no contemplado: " + estado);
+        };
+
+        assertEquals(
+                mensajeEsperado,
+                excepcion.getMessage()
+        );
+
+        assertEquals(
+                estado,
+                viaje.getEstado()
+        );
+
+        verify(viajeRepository)
+                .findById(1L);
+
+        verify(viajeRepository, never())
+                .save(any(Viaje.class));
+
+        verifyNoInteractions(choferService);
     }
 }

@@ -9,6 +9,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
+import com.unsa.taxis.event.OfertaRechazadaEvent;
+import com.unsa.taxis.event.OfertaVencidaEvent;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -24,6 +27,12 @@ class OfertaViajeServiceTest {
     @Mock
     private OfertaViajeRepository ofertaViajeRepository;
 
+    @Mock
+    private ChoferService choferService;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private OfertaViajeService ofertaViajeService;
 
     private Viaje viaje;
@@ -34,7 +43,9 @@ class OfertaViajeServiceTest {
     void setUp() {
 
         ofertaViajeService = new OfertaViajeService(
-                ofertaViajeRepository
+                ofertaViajeRepository,
+                choferService,
+                eventPublisher
         );
 
         chofer = Chofer.builder()
@@ -126,6 +137,11 @@ class OfertaViajeServiceTest {
 
         verify(ofertaViajeRepository).findById(1L);
 
+        verify(choferService).cambiarEstado(
+                chofer.getId(),
+                EstadoChofer.OCUPADO
+        );
+
         verify(ofertaViajeRepository).findByViajeIdAndEstado(
                 viaje.getId(),
                 EstadoOferta.PENDIENTE
@@ -180,6 +196,11 @@ class OfertaViajeServiceTest {
 
         assertEquals(chofer, viaje.getChofer());
         assertEquals(EstadoViaje.ACEPTADO, viaje.getEstado());
+
+        verify(choferService).cambiarEstado(
+                chofer.getId(),
+                EstadoChofer.OCUPADO
+        );
 
         verify(ofertaViajeRepository).save(ofertaAceptada);
         verify(ofertaViajeRepository).save(otraOferta);
@@ -322,6 +343,10 @@ class OfertaViajeServiceTest {
         );
 
         verify(ofertaViajeRepository).save(oferta);
+
+        verify(eventPublisher).publishEvent(
+                new OfertaRechazadaEvent(oferta.getId())
+        );
     }
 
     @Test
@@ -404,6 +429,10 @@ class OfertaViajeServiceTest {
         );
 
         verify(ofertaViajeRepository).save(oferta);
+
+        verify(eventPublisher).publishEvent(
+                new OfertaVencidaEvent(oferta.getId())
+        );
     }
 
     @Test
