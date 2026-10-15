@@ -16,6 +16,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.springframework.context.ApplicationEventPublisher;
+import com.unsa.taxis.event.ViajeCreadoEvent;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -41,6 +43,9 @@ class ViajeServiceTest {
 
     @Mock
     private ViajeMapper viajeMapper;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private ViajeService viajeService;
@@ -97,7 +102,11 @@ class ViajeServiceTest {
 
         // Simulamos el guardado del viaje
         when(viajeRepository.save(any(Viaje.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+                .thenAnswer(invocation -> {
+                    Viaje viaje = invocation.getArgument(0);
+                    viaje.setId(1L);
+                    return viaje;
+                });
 
         ViajeResponse respuesta = ViajeResponse.builder()
                 .id(1L)
@@ -145,6 +154,13 @@ class ViajeServiceTest {
 
         verify(clienteRepository, never())
                 .save(any(Cliente.class));
+
+        ArgumentCaptor<ViajeCreadoEvent> eventoCaptor =
+                ArgumentCaptor.forClass(ViajeCreadoEvent.class);
+
+        verify(eventPublisher).publishEvent(eventoCaptor.capture());
+
+        assertEquals(1L, eventoCaptor.getValue().viajeId());
     }
 
     @Test

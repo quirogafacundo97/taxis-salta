@@ -10,6 +10,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import com.unsa.taxis.mapper.ViajeMapper;
 import com.unsa.taxis.dto.ViajeResponse;
+import com.unsa.taxis.event.ViajeCreadoEvent;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -25,7 +28,9 @@ public class ViajeService {
     private final CalculadorCostoService calculadorCostoService;
     private final ViajeMapper viajeMapper;
     private final ChoferService choferService;
+    private final ApplicationEventPublisher eventPublisher;
 
+    @Transactional
     public ViajeResponse crearViaje(CrearViajeRequest request) {
 
         // 1. Buscar al cliente por su WhatsApp
@@ -70,6 +75,10 @@ public class ViajeService {
 
         // 6. Guardar el viaje
         Viaje viajeGuardado = viajeRepository.save(viaje);
+
+        eventPublisher.publishEvent(
+                new ViajeCreadoEvent(viajeGuardado.getId())
+        );
 
         //7. Retornar el dto
         return viajeMapper.toResponse(viajeGuardado);
