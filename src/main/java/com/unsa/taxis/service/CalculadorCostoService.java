@@ -1,6 +1,9 @@
 package com.unsa.taxis.service;
 
 import com.unsa.taxis.model.Tarifa;
+import com.unsa.taxis.routing.RoutingException;
+import com.unsa.taxis.routing.RoutingService;
+import com.unsa.taxis.routing.RutaResponse;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -12,11 +15,14 @@ public class CalculadorCostoService {
     private static final double METROS_POR_FICHA = 100.0;
 
     private final CalculadorDistanciaService calculadorDistanciaService;
+    private final RoutingService routingService;
 
     public CalculadorCostoService(
-            CalculadorDistanciaService calculadorDistanciaService) {
+            CalculadorDistanciaService calculadorDistanciaService,
+            RoutingService routingService) {
 
         this.calculadorDistanciaService = calculadorDistanciaService;
+        this.routingService = routingService;
     }
 
     public BigDecimal calcularCosto(
@@ -27,13 +33,27 @@ public class CalculadorCostoService {
             Tarifa tarifa
     ) {
 
-        double distanciaMetros =
-                calculadorDistanciaService.calcularDistanciaMetros(
-                        latitudOrigen,
-                        longitudOrigen,
-                        latitudDestino,
-                        longitudDestino
-                );
+        double distanciaMetros;
+
+        try {
+            RutaResponse ruta = routingService.calcularRuta(
+                    latitudOrigen,
+                    longitudOrigen,
+                    latitudDestino,
+                    longitudDestino
+            );
+
+            distanciaMetros = ruta.getDistanciaMetros();
+
+        } catch (RoutingException e) {
+            distanciaMetros =
+                    calculadorDistanciaService.calcularDistanciaMetros(
+                            latitudOrigen,
+                            longitudOrigen,
+                            latitudDestino,
+                            longitudDestino
+                    );
+        }
 
         long cantidadFichas = (long) Math.ceil(
                 distanciaMetros / METROS_POR_FICHA
