@@ -15,6 +15,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.ZoneId;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -53,7 +54,9 @@ public class ViajeService {
         OffsetDateTime.now(ZoneId.of("America/Argentina/Salta")));
          
         // 2. Obtener fecha y hora actual
-        OffsetDateTime ahora = OffsetDateTime.now();
+        OffsetDateTime ahora = OffsetDateTime.now(
+                ZoneId.of("America/Argentina/Salta")
+        );
 
         // 3. Determinar la tarifa correspondiente
         Tarifa tarifa = tarifaService.obtenerTarifaParaFechaHora(ahora);
