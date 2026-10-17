@@ -1,24 +1,22 @@
 package com.unsa.taxis.service;
 
+import com.unsa.taxis.dto.CrearViajeRequest;
+import com.unsa.taxis.dto.ViajeResponse;
+import com.unsa.taxis.event.ViajeCreadoEvent;
 import com.unsa.taxis.exception.TransicionEstadoViajeException;
 import com.unsa.taxis.exception.ViajeNoEncontradoException;
-import com.unsa.taxis.dto.CrearViajeRequest;
+import com.unsa.taxis.mapper.ViajeMapper;
 import com.unsa.taxis.model.*;
 import com.unsa.taxis.repository.ClienteRepository;
 import com.unsa.taxis.repository.ViajeRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import com.unsa.taxis.mapper.ViajeMapper;
-import com.unsa.taxis.dto.ViajeResponse;
-import com.unsa.taxis.event.ViajeCreadoEvent;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.time.ZoneId;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Service
@@ -47,11 +45,6 @@ public class ViajeService {
 
                     return clienteRepository.save(nuevoCliente);
                 });
-
-        System.out.println("Zona horaria JVM: " + ZoneId.systemDefault());
-        System.out.println("Hora JVM: " + OffsetDateTime.now());
-        System.out.println("Hora Salta: " +
-        OffsetDateTime.now(ZoneId.of("America/Argentina/Salta")));
          
         // 2. Obtener fecha y hora actual
         OffsetDateTime ahora = OffsetDateTime.now(
