@@ -6,8 +6,10 @@ INSERT INTO tarifas (
     fecha_hasta
 )
 VALUES
-    ('DIURNA', 980.00, 98.00, '2025-12-22', NULL),
-    ('NOCTURNA', 1176.00, 118.00, '2025-12-22', NULL);
+    ('DIURNA', 980.00, 98.00, '2025-12-22', '2026-09-30'),
+    ('NOCTURNA', 1176.00, 118.00, '2025-12-22', '2026-09-30'),
+    ('DIURNA', 1176.00, 118.00, '2026-10-01', NULL),
+    ('NOCTURNA', 1411.00, 142.00, '2026-10-01', NULL);
 
 INSERT INTO feriados (
     fecha,

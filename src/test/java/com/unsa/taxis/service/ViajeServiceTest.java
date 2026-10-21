@@ -47,6 +47,9 @@ class ViajeServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private TokenSolicitudViajeService tokenSolicitudViajeService;
+
     @InjectMocks
     private ViajeService viajeService;
 
@@ -65,7 +68,7 @@ class ViajeServiceTest {
 
         // Request recibido
         CrearViajeRequest request = CrearViajeRequest.builder()
-                .whatsappId("5493875551234")
+                .token("tokenPrueba")
                 .nombreCliente("Juan")
                 .direccionOrigen("Av. Belgrano 1234, Salta")
                 .latitudOrigen(-24.7885)
@@ -120,6 +123,9 @@ class ViajeServiceTest {
         when(viajeMapper.toResponse(any(Viaje.class)))
                 .thenReturn(respuesta);
 
+        when(tokenSolicitudViajeService.consumirToken("tokenPrueba"))
+                .thenReturn(Optional.of("5493875551234"));
+
         // Ejecutamos el metodo REAL que estamos probando
         ViajeResponse resultado = viajeService.crearViaje(request);
 
@@ -167,7 +173,7 @@ class ViajeServiceTest {
     void debeCrearClienteNuevoAlCrearViaje() {
 
         CrearViajeRequest request = CrearViajeRequest.builder()
-                .whatsappId("5493875999999")
+                .token("tokenPrueba")
                 .nombreCliente("Carlos")
                 .direccionOrigen("Av. Belgrano 1234, Salta")
                 .latitudOrigen(-24.7885)
@@ -222,6 +228,9 @@ class ViajeServiceTest {
 
         when(viajeMapper.toResponse(any(Viaje.class)))
                 .thenReturn(respuesta);
+
+        when(tokenSolicitudViajeService.consumirToken("tokenPrueba"))
+                .thenReturn(Optional.of("5493875999999"));
 
         // Ejecutamos el servicio REAL
         ViajeResponse resultado = viajeService.crearViaje(request);

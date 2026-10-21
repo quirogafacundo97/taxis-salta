@@ -1,5 +1,7 @@
+
 package com.unsa.taxis.controller;
 
+import com.unsa.taxis.service.WhatsAppConversacionService;
 import com.unsa.taxis.service.WhatsAppWebhookService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,9 +25,11 @@ class WhatsAppWebhookControllerTest {
     @MockitoBean
     private WhatsAppWebhookService whatsAppWebhookService;
 
+    @MockitoBean
+    private WhatsAppConversacionService whatsAppConversacionService;
+
     @Test
     void debeAceptarUnaNotificacionDeWhatsApp() throws Exception {
-
         when(whatsAppWebhookService.procesarNotificacion(anyMap()))
                 .thenReturn(
                         new WhatsAppWebhookService.ResultadoNotificacion(
@@ -44,5 +48,36 @@ class WhatsAppWebhookControllerTest {
                 .andExpect(status().isOk());
 
         verify(whatsAppWebhookService).procesarNotificacion(anyMap());
+    }
+
+    @Test
+    void debeDerivarLosMensajesEntrantesAlServicioDeConversacion()
+            throws Exception {
+        WhatsAppWebhookService.MensajeEntrante mensaje =
+                new WhatsAppWebhookService.MensajeEntrante(
+                        "5493870000000",
+                        "wamid.prueba",
+                        "text",
+                        "Quiero un taxi"
+                );
+
+        when(whatsAppWebhookService.procesarNotificacion(anyMap()))
+                .thenReturn(
+                        new WhatsAppWebhookService.ResultadoNotificacion(
+                                java.util.List.of(mensaje),
+                                0
+                        )
+                );
+
+        mockMvc.perform(post("/api/whatsapp/webhook")
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "object": "whatsapp_business_account"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        verify(whatsAppConversacionService).procesarMensaje(mensaje);
     }
 }

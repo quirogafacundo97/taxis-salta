@@ -50,11 +50,19 @@ public class TarifaService {
             return TipoTarifa.NOCTURNA;
         }
 
-        // Lunes a sábado:
-        // Diurna desde las 06:00 hasta antes de las 22:00
+        // Sábados: tarifa diurna desde las 06:00 hasta antes de las 13:00
+        if (fecha.getDayOfWeek() == DayOfWeek.SATURDAY) {
+            if (!hora.isBefore(LocalTime.of(6, 0))
+                    && hora.isBefore(LocalTime.of(13, 0))) {
+                return TipoTarifa.DIURNA;
+            }
+
+        return TipoTarifa.NOCTURNA;
+        }
+
+        // Lunes a viernes: tarifa diurna desde las 06:00 hasta antes de las 22:00
         if (!hora.isBefore(LocalTime.of(6, 0))
                 && hora.isBefore(LocalTime.of(22, 0))) {
-
             return TipoTarifa.DIURNA;
         }
 

@@ -8,6 +8,12 @@ import org.springframework.stereotype.Repository;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import java.util.Optional;
+
 @Repository
 public interface OfertaViajeRepository
         extends JpaRepository<OfertaViaje, Long> {
@@ -23,4 +29,8 @@ public interface OfertaViajeRepository
             EstadoOferta estado,
             OffsetDateTime fecha
     );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT o FROM OfertaViaje o WHERE o.id = :id")
+    Optional<OfertaViaje> buscarPorIdConBloqueo(@Param("id") Long id);
 }

@@ -188,3 +188,21 @@ CREATE INDEX idx_viajes_estado
 
 CREATE INDEX idx_viajes_fecha
     ON viajes(fecha_creacion);
+
+CREATE TABLE tokens_solicitud_viaje (
+    id BIGSERIAL PRIMARY KEY,
+    token_hash VARCHAR(64) NOT NULL UNIQUE,
+    whatsapp_id VARCHAR(30) NOT NULL,
+    fecha_creacion TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_expiracion TIMESTAMP WITH TIME ZONE NOT NULL,
+    fecha_uso TIMESTAMP WITH TIME ZONE,
+
+    CONSTRAINT chk_token_expiracion
+        CHECK (fecha_expiracion > fecha_creacion),
+
+    CONSTRAINT chk_token_fecha_uso
+        CHECK (fecha_uso IS NULL OR fecha_uso >= fecha_creacion)
+);
+
+CREATE INDEX idx_tokens_solicitud_viaje_whatsapp
+    ON tokens_solicitud_viaje (whatsapp_id);

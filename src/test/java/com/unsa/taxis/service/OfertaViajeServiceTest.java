@@ -13,6 +13,10 @@ import org.springframework.context.ApplicationEventPublisher;
 import com.unsa.taxis.event.OfertaRechazadaEvent;
 import com.unsa.taxis.event.OfertaVencidaEvent;
 
+import com.unsa.taxis.repository.ChoferRepository;
+import com.unsa.taxis.repository.ViajeRepository;
+import jakarta.persistence.EntityManager;
+
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +24,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class OfertaViajeServiceTest {
@@ -33,6 +38,15 @@ class OfertaViajeServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private ChoferRepository choferRepository;
+
+    @Mock
+    private ViajeRepository viajeRepository;
+
+    @Mock
+    private EntityManager entityManager;
+
     private OfertaViajeService ofertaViajeService;
 
     private Viaje viaje;
@@ -45,7 +59,15 @@ class OfertaViajeServiceTest {
         ofertaViajeService = new OfertaViajeService(
                 ofertaViajeRepository,
                 choferService,
-                eventPublisher
+                eventPublisher,
+                choferRepository,
+                viajeRepository
+        );
+
+        ReflectionTestUtils.setField(
+                ofertaViajeService,
+                "entityManager",
+                entityManager
         );
 
         chofer = Chofer.builder()
@@ -77,6 +99,18 @@ class OfertaViajeServiceTest {
                 .estado(EstadoViaje.SOLICITADO)
                 .chofer(null)
                 .build();
+    }
+
+    private void configurarBloqueos(OfertaViaje oferta) {
+        when(viajeRepository.buscarPorIdConBloqueo(viaje.getId()))
+                .thenReturn(Optional.of(viaje));
+
+        when(choferRepository.buscarPorIdConBloqueo(
+                oferta.getChofer().getId()))
+                .thenReturn(Optional.of(oferta.getChofer()));
+
+        when(ofertaViajeRepository.buscarPorIdConBloqueo(oferta.getId()))
+                .thenReturn(Optional.of(oferta));
     }
 
     @Test
@@ -124,6 +158,8 @@ class OfertaViajeServiceTest {
         when(ofertaViajeRepository.findById(1L))
                 .thenReturn(Optional.of(oferta));
 
+        configurarBloqueos(oferta);
+
         when(ofertaViajeRepository.findByViajeIdAndEstado(
                 viaje.getId(),
                 EstadoOferta.PENDIENTE
@@ -137,10 +173,7 @@ class OfertaViajeServiceTest {
 
         verify(ofertaViajeRepository).findById(1L);
 
-        verify(choferService).cambiarEstado(
-                chofer.getId(),
-                EstadoChofer.OCUPADO
-        );
+        verify(choferRepository).save(chofer);
 
         verify(ofertaViajeRepository).findByViajeIdAndEstado(
                 viaje.getId(),
@@ -175,6 +208,8 @@ class OfertaViajeServiceTest {
         when(ofertaViajeRepository.findById(1L))
                 .thenReturn(Optional.of(ofertaAceptada));
 
+        configurarBloqueos(ofertaAceptada);
+
         when(ofertaViajeRepository.findByViajeIdAndEstado(
                 viaje.getId(),
                 EstadoOferta.PENDIENTE
@@ -197,10 +232,7 @@ class OfertaViajeServiceTest {
         assertEquals(chofer, viaje.getChofer());
         assertEquals(EstadoViaje.ACEPTADO, viaje.getEstado());
 
-        verify(choferService).cambiarEstado(
-                chofer.getId(),
-                EstadoChofer.OCUPADO
-        );
+        verify(choferRepository).save(chofer);
 
         verify(ofertaViajeRepository).save(ofertaAceptada);
         verify(ofertaViajeRepository).save(otraOferta);
@@ -220,6 +252,8 @@ class OfertaViajeServiceTest {
 
         when(ofertaViajeRepository.findById(1L))
                 .thenReturn(Optional.of(oferta));
+
+        configurarBloqueos(oferta);
 
         assertThrows(
                 OfertaNoDisponibleException.class,
@@ -256,6 +290,8 @@ class OfertaViajeServiceTest {
 
         when(ofertaViajeRepository.findById(1L))
                 .thenReturn(Optional.of(oferta));
+
+        configurarBloqueos(oferta);
 
         assertThrows(
                 OfertaNoDisponibleException.class,
@@ -301,6 +337,8 @@ class OfertaViajeServiceTest {
         when(ofertaViajeRepository.findById(1L))
                 .thenReturn(Optional.of(oferta));
 
+        configurarBloqueos(oferta);
+
         assertThrows(
                 OfertaNoDisponibleException.class,
                 () -> ofertaViajeService.aceptarOferta(1L)
@@ -332,7 +370,7 @@ class OfertaViajeServiceTest {
                 .fechaExpiracion(OffsetDateTime.now().plusSeconds(10))
                 .build();
 
-        when(ofertaViajeRepository.findById(1L))
+        when(ofertaViajeRepository.buscarPorIdConBloqueo(1L))
                 .thenReturn(Optional.of(oferta));
 
         ofertaViajeService.rechazarOferta(1L);
@@ -361,7 +399,7 @@ class OfertaViajeServiceTest {
                 .fechaExpiracion(OffsetDateTime.now().plusSeconds(10))
                 .build();
 
-        when(ofertaViajeRepository.findById(1L))
+        when(ofertaViajeRepository.buscarPorIdConBloqueo(1L))
                 .thenReturn(Optional.of(oferta));
 
         assertThrows(
@@ -389,7 +427,7 @@ class OfertaViajeServiceTest {
                 .fechaExpiracion(OffsetDateTime.now().minusSeconds(10))
                 .build();
 
-        when(ofertaViajeRepository.findById(1L))
+        when(ofertaViajeRepository.buscarPorIdConBloqueo(1L))
                 .thenReturn(Optional.of(oferta));
 
         assertThrows(
@@ -404,6 +442,10 @@ class OfertaViajeServiceTest {
 
         verify(ofertaViajeRepository)
                 .save(oferta);
+
+        verify(eventPublisher).publishEvent(
+                new OfertaVencidaEvent(oferta.getId())
+        );
     }
 
     @Test
@@ -418,7 +460,7 @@ class OfertaViajeServiceTest {
                 .fechaExpiracion(OffsetDateTime.now().minusSeconds(10))
                 .build();
 
-        when(ofertaViajeRepository.findById(1L))
+        when(ofertaViajeRepository.buscarPorIdConBloqueo(1L))
                 .thenReturn(Optional.of(oferta));
 
         ofertaViajeService.vencerOferta(1L);
@@ -447,7 +489,7 @@ class OfertaViajeServiceTest {
                 .fechaExpiracion(OffsetDateTime.now().plusSeconds(10))
                 .build();
 
-        when(ofertaViajeRepository.findById(1L))
+        when(ofertaViajeRepository.buscarPorIdConBloqueo(1L))
                 .thenReturn(Optional.of(oferta));
 
         assertThrows(
@@ -517,6 +559,4 @@ class OfertaViajeServiceTest {
                         any(OffsetDateTime.class)
                 );
     }
-
-
 }

@@ -4,7 +4,8 @@ import com.unsa.taxis.model.OfertaViaje;
 import com.unsa.taxis.model.Viaje;
 import com.unsa.taxis.service.DespachoViajeService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.event.EventListener;
+import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.stereotype.Component;
 import com.unsa.taxis.service.OfertaViajeService;
 
@@ -15,7 +16,7 @@ public class OfertaEventListener {
     private final DespachoViajeService despachoViajeService;
     private final OfertaViajeService ofertaViajeService;
 
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void manejarOfertaRechazada(OfertaRechazadaEvent event) {
         OfertaViaje oferta =
                 ofertaViajeService.buscarPorId(event.ofertaId());
@@ -25,8 +26,9 @@ public class OfertaEventListener {
         despachoViajeService.continuarDespacho(viaje);
     }
 
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void manejarOfertaVencida(OfertaVencidaEvent event) {
+
         OfertaViaje oferta =
                 ofertaViajeService.buscarPorId(event.ofertaId());
 

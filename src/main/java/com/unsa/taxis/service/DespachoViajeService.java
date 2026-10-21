@@ -160,8 +160,8 @@ public class DespachoViajeService {
         candidatos.stream()
                 .limit(CHOFERES_POR_RONDA)
                 .map(ChoferConRuta::getChofer)
-                .forEach(chofer ->
-                        ofertaViajeService.crearOferta(viaje, chofer)
-                );
+                .forEach(chofer ->{
+                        ofertaViajeService.crearOferta(viaje, chofer);
+                });
     }
 }

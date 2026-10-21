@@ -19,8 +19,6 @@ public class OfertaViajeScheduler {
     @Scheduled(fixedDelay = 1000)
     public void procesarOfertasExpiradas() {
 
-        log.info("Buscando ofertas expiradas...");
-
         List<OfertaViaje> ofertasExpiradas =
                 ofertaViajeService.listarOfertasExpiradas();
 

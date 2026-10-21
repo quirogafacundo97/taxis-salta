@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.unsa.taxis.exception.TokenSolicitudViajeInvalidoException;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -25,6 +26,7 @@ public class ViajeService {
 
     private final ViajeRepository viajeRepository;
     private final ClienteRepository clienteRepository;
+    private final TokenSolicitudViajeService tokenSolicitudViajeService;
     private final TarifaService tarifaService;
     private final CalculadorCostoService calculadorCostoService;
     private final ViajeMapper viajeMapper;
@@ -34,27 +36,32 @@ public class ViajeService {
     @Transactional
     public ViajeResponse crearViaje(CrearViajeRequest request) {
 
-        // 1. Buscar al cliente por su WhatsApp
+        // 1. Validar y consumir el token de solicitud
+        String whatsappId = tokenSolicitudViajeService
+                .consumirToken(request.getToken())
+                .orElseThrow(TokenSolicitudViajeInvalidoException::new);
+
+        // 2. Buscar al cliente por su WhatsApp
         Cliente cliente = clienteRepository
-                .findByWhatsappId(request.getWhatsappId())
+                .findByWhatsappId(whatsappId)
                 .orElseGet(() -> {
                     Cliente nuevoCliente = Cliente.builder()
-                            .whatsappId(request.getWhatsappId())
+                            .whatsappId(whatsappId)
                             .nombre(request.getNombreCliente())
                             .build();
 
                     return clienteRepository.save(nuevoCliente);
                 });
          
-        // 2. Obtener fecha y hora actual
+        // 3. Obtener fecha y hora actual
         OffsetDateTime ahora = OffsetDateTime.now(
                 ZoneId.of("America/Argentina/Salta")
         );
 
-        // 3. Determinar la tarifa correspondiente
+        // 4. Determinar la tarifa correspondiente
         Tarifa tarifa = tarifaService.obtenerTarifaParaFechaHora(ahora);
 
-        // 4. Calcular el costo estimado
+        // 5. Calcular el costo estimado
         BigDecimal costoEstimado = calculadorCostoService.calcularCosto(
                 request.getLatitudOrigen(),
                 request.getLongitudOrigen(),
@@ -63,7 +70,7 @@ public class ViajeService {
                 tarifa
         );
 
-        // 5. Crear el viaje
+        // 6. Crear el viaje
         Viaje viaje = Viaje.builder()
                 .cliente(cliente)
                 .direccionOrigen(request.getDireccionOrigen())
@@ -76,14 +83,14 @@ public class ViajeService {
                 .costoEstimado(costoEstimado)
                 .build();
 
-        // 6. Guardar el viaje
+        // 7. Guardar el viaje
         Viaje viajeGuardado = viajeRepository.save(viaje);
 
         eventPublisher.publishEvent(
                 new ViajeCreadoEvent(viajeGuardado.getId())
         );
 
-        //7. Retornar el dto
+        //8. Retornar el dto
         return viajeMapper.toResponse(viajeGuardado);
     }
 

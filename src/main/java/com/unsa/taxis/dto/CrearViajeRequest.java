@@ -12,7 +12,7 @@ import lombok.*;
 public class CrearViajeRequest {
 
     @NotBlank
-    private String whatsappId;
+    private String token;
 
     private String nombreCliente;
 
