@@ -41,27 +41,33 @@
                     </p>
 
                     <div class="field">
-                        <label for="direccion-origen">Dirección de origen</label>
+                        <label for="direccion-origen">
+                            Dirección o descripción del lugar de origen
+                        </label>
                         <input
-                            id="direccion-origen"
-                            name="direccionOrigen"
-                            type="text"
-                            placeholder="Ej.: Plaza 9 de Julio, Salta"
-                            autocomplete="street-address"
-                            required
+                                id="direccion-origen"
+                                name="direccionOrigen"
+                                type="text"
+                                placeholder="Ej.: Calle, plaza o referencia del lugar"
+                                autocomplete="street-address"
                         >
                     </div>
+
+                    <button type="button" id="buscar-origen">
+                        Buscar dirección
+                    </button>
+
+                    <div id="resultados-origen" class="resultados-busqueda" hidden></div>
 
                     <button type="button" id="usar-ubicacion">
                         Usar mi ubicación actual
                     </button>
 
-                    <div id="mapa" class="mapa"></div>
-
                     <button type="button" id="continuar-destino">
                         Continuar al destino
                     </button>
                 </section>
+                <div id="mapa" class="mapa"></div>
 
                 <section class="card" id="paso-destino"
                          aria-labelledby="titulo-destino" hidden>
@@ -71,16 +77,23 @@
                     </p>
 
                     <div class="field">
-                        <label for="direccion-destino">Dirección de destino</label>
+                        <label for="direccion-destino">
+                            Dirección o descripción del destino
+                        </label>
                         <input
-                            id="direccion-destino"
-                            name="direccionDestino"
-                            type="text"
-                            placeholder="Ej.: Parque San Martín, Salta"
-                            autocomplete="street-address"
-                            required
+                                id="direccion-destino"
+                                name="direccionDestino"
+                                type="text"
+                                placeholder="Ej.: Dirección, negocio o lugar de referencia"
+                                autocomplete="street-address"
                         >
                     </div>
+
+                    <button type="button" id="buscar-destino">
+                        Buscar dirección
+                    </button>
+
+                    <div id="resultados-destino" class="resultados-busqueda" hidden></div>
 
                     <button type="button" id="volver-origen">
                         Volver al origen
@@ -96,6 +109,7 @@
                     <h3 id="titulo-confirmacion">Confirmá tu viaje</h3>
                     <p>Revisá los datos antes de solicitar el taxi.</p>
 
+
                     <div class="summary">
                         <p>
                             <strong>Origen:</strong>
@@ -105,7 +119,24 @@
                             <strong>Destino:</strong>
                             <span id="resumen-destino">Pendiente</span>
                         </p>
+                        <p>
+                            <strong>Distancia estimada:</strong>
+                            <span id="resumen-distancia">Pendiente</span>
+                        </p>
+                        <p>
+                            <strong>Duración estimada:</strong>
+                            <span id="resumen-duracion">Pendiente</span>
+                        </p>
                     </div>
+
+
+                    <div id="alternativas-ruta" class="alternativas-ruta" hidden>
+                        <h4>Elegí tu recorrido</h4>
+                        <p>Compará la distancia y el tiempo estimado de cada ruta.</p>
+                        <div id="lista-rutas"></div>
+                    </div>
+
+
 
                     <button type="button" id="volver-destino">
                         Volver al destino
