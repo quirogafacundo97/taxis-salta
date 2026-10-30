@@ -133,11 +133,11 @@ class OfertaViajeServiceTest {
         assertNotNull(oferta.getFechaExpiracion());
 
         assertTrue(!oferta.getFechaExpiracion().isBefore(
-                antes.plusSeconds(10)
+                antes.plusSeconds(30)
         ));
 
         assertTrue(!oferta.getFechaExpiracion().isAfter(
-                despues.plusSeconds(10)
+                despues.plusSeconds(30)
         ));
 
         verify(ofertaViajeRepository).save(oferta);

@@ -25,7 +25,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OfertaViajeService {
 
-    private static final long TIEMPO_EXPIRACION_SEGUNDOS = 10;
+    private static final long TIEMPO_EXPIRACION_SEGUNDOS = 30;
 
     private final OfertaViajeRepository ofertaViajeRepository;
     private final ChoferService choferService;
