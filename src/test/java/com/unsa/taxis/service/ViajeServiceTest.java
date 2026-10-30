@@ -76,6 +76,9 @@ class ViajeServiceTest {
                 .direccionDestino("Plaza 9 de Julio, Salta")
                 .latitudDestino(-24.7875)
                 .longitudDestino(-65.4105)
+                .rutaGeometria("{\"type\":\"LineString\",\"coordinates\":[[-65.4100,-24.7885],[-65.4105,-24.7875]]}")
+                .distanciaMetros(1500)
+                .duracionSegundos(300)
                 .build();
 
         // Tarifa que queremos simular
@@ -153,8 +156,19 @@ class ViajeServiceTest {
                         tarifa
                 );
 
-        verify(viajeRepository)
-                .save(any(Viaje.class));
+        ArgumentCaptor<Viaje> viajeCaptor =
+                ArgumentCaptor.forClass(Viaje.class);
+
+        verify(viajeRepository).save(viajeCaptor.capture());
+
+        Viaje viajeGuardado = viajeCaptor.getValue();
+
+        assertEquals(
+                "{\"type\":\"LineString\",\"coordinates\":[[-65.4100,-24.7885],[-65.4105,-24.7875]]}",
+                viajeGuardado.getRutaGeometria()
+        );
+        assertEquals(1500, viajeGuardado.getDistanciaMetros());
+        assertEquals(300, viajeGuardado.getDuracionSegundos());
 
         verify(viajeMapper).toResponse(any(Viaje.class));
 

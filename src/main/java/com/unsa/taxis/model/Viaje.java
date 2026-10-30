@@ -62,6 +62,15 @@ public class Viaje {
     @Column(name = "fecha_creacion", updatable = false)
     private OffsetDateTime fechaCreacion;
 
+    @Column(name = "ruta_geometria", columnDefinition = "TEXT")
+    private String rutaGeometria;
+
+    @Column(name = "distancia_metros")
+    private Integer distanciaMetros;
+
+    @Column(name = "duracion_segundos")
+    private Integer duracionSegundos;
+
     @PrePersist
     protected void onCreate() {
         this.fechaCreacion = OffsetDateTime.now();

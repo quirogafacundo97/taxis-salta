@@ -109,6 +109,9 @@ CREATE TABLE viajes (
         CHECK (tipo_tarifa IN ('DIURNA', 'NOCTURNA')),
 
     costo_estimado DECIMAL(10, 2),
+    ruta_geometria TEXT,
+    distancia_metros INTEGER,
+    duracion_segundos INTEGER,
     fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_viaje_cliente

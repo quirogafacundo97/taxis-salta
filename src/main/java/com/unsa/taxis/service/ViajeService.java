@@ -81,6 +81,9 @@ public class ViajeService {
                 .longitudDestino(request.getLongitudDestino())
                 .tipoTarifa(tarifa.getTipo())
                 .costoEstimado(costoEstimado)
+                .rutaGeometria(request.getRutaGeometria())
+                .distanciaMetros(request.getDistanciaMetros())
+                .duracionSegundos(request.getDuracionSegundos())
                 .build();
 
         // 7. Guardar el viaje

@@ -175,6 +175,8 @@ formulario.addEventListener("submit", async (evento) => {
         return;
     }
 
+    const rutaSeleccionada = rutasDisponibles[indiceRutaSeleccionada];
+
     const solicitud = {
         token: tokenSolicitud,
         nombreCliente: null,
@@ -183,7 +185,16 @@ formulario.addEventListener("submit", async (evento) => {
         longitudOrigen: coordenadasOrigen.longitud,
         direccionDestino: textoDestino,
         latitudDestino: coordenadasDestino.latitud,
-        longitudDestino: coordenadasDestino.longitud
+        longitudDestino: coordenadasDestino.longitud,
+        rutaGeometria: rutaSeleccionada
+            ? JSON.stringify(rutaSeleccionada.geometry)
+            : null,
+        distanciaMetros: rutaSeleccionada
+            ? Math.round(rutaSeleccionada.distance)
+            : null,
+        duracionSegundos: rutaSeleccionada
+            ? Math.round(rutaSeleccionada.duration)
+            : null
     };
 
     const botonSolicitar =

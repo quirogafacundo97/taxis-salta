@@ -33,4 +33,10 @@ public class CrearViajeRequest {
 
     @NotNull
     private Double longitudDestino;
+
+    private String rutaGeometria;
+
+    private Integer distanciaMetros;
+
+    private Integer duracionSegundos;
 }

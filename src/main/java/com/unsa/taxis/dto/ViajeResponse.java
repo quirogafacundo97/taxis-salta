@@ -28,5 +28,9 @@ public class ViajeResponse {
 
     private BigDecimal costoEstimado;
 
+    private String rutaGeometria;
+    private Integer distanciaMetros;
+    private Integer duracionSegundos;
+
     private OffsetDateTime fechaCreacion;
 }
