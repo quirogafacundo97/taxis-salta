@@ -21,10 +21,16 @@ import com.unsa.taxis.event.ViajeCreadoEvent;
 
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+
+import com.unsa.taxis.exception.AccesoNoAutorizadoException;
+import org.springframework.security.core.Authentication;
+
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 @ExtendWith(MockitoExtension.class)
 class ViajeServiceTest {
@@ -55,6 +61,15 @@ class ViajeServiceTest {
 
     @Mock
     private ChoferService choferService;
+
+    @Mock
+    private OfertaViajeService ofertaViajeService;
+
+    @Mock
+    private UsuarioAutenticadoService usuarioAutenticadoService;
+
+    @Mock
+    private Authentication authentication;
 
     @Test
     void debeCrearViajeConClienteExistente() {
@@ -287,6 +302,10 @@ class ViajeServiceTest {
     @Test
     void debeLanzarExcepcionCuandoNoExisteElViaje() {
 
+        org.mockito.Mockito.doReturn(
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
+        ).when(authentication).getAuthorities();
+
         // Simulamos que el viaje no existe
         when(viajeRepository.findById(999L))
                 .thenReturn(Optional.empty());
@@ -295,7 +314,7 @@ class ViajeServiceTest {
         ViajeNoEncontradoException excepcion =
                 assertThrows(
                         ViajeNoEncontradoException.class,
-                        () -> viajeService.buscarPorId(999L)
+                        () -> viajeService.buscarPorId(999L, authentication)
                 );
 
         // Verificamos el mensaje
@@ -313,17 +332,127 @@ class ViajeServiceTest {
     }
 
     @Test
+    void debePermitirAlAdministradorConsultarCualquierViaje() {
+
+        Chofer chofer = Chofer.builder()
+                .id(1L)
+                .build();
+
+        Viaje viaje = Viaje.builder()
+                .id(1L)
+                .chofer(chofer)
+                .build();
+
+        ViajeResponse respuesta = ViajeResponse.builder()
+                .id(1L)
+                .build();
+
+        org.mockito.Mockito.doReturn(
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
+        ).when(authentication).getAuthorities();
+
+        when(viajeRepository.findById(1L))
+                .thenReturn(Optional.of(viaje));
+
+        when(viajeMapper.toResponse(viaje))
+                .thenReturn(respuesta);
+
+        ViajeResponse resultado =
+                viajeService.buscarPorId(1L, authentication);
+
+        assertEquals(1L, resultado.getId());
+
+        verify(viajeRepository).findById(1L);
+        verify(viajeMapper).toResponse(viaje);
+     }
+
+
+     @Test
+     void debePermitirAlChoferConsultarSuPropioViaje() {
+
+        Chofer chofer = Chofer.builder()
+                .id(1L)
+                .build();
+
+        Viaje viaje = Viaje.builder()
+                .id(1L)
+                .chofer(chofer)
+                .build();
+
+        ViajeResponse respuesta = ViajeResponse.builder()
+                .id(1L)
+                .build();
+
+        when(usuarioAutenticadoService.obtenerChofer(authentication))
+                .thenReturn(chofer);
+
+        when(viajeRepository.findById(1L))
+                .thenReturn(Optional.of(viaje));
+
+        when(viajeMapper.toResponse(viaje))
+                .thenReturn(respuesta);
+
+        ViajeResponse resultado =
+                viajeService.buscarPorId(1L, authentication);
+
+        assertEquals(1L, resultado.getId());
+
+        verify(viajeRepository).findById(1L);
+        verify(viajeMapper).toResponse(viaje);
+     }
+
+
+     @Test
+     void noDebePermitirAlChoferConsultarElViajeDeOtroChofer() {
+
+        Chofer choferAsignado = Chofer.builder()
+                .id(1L)
+                .build();
+
+        Chofer choferAutenticado = Chofer.builder()
+                .id(2L)
+                .build();
+
+        Viaje viaje = Viaje.builder()
+                .id(1L)
+                .chofer(choferAsignado)
+                .build();
+
+        when(usuarioAutenticadoService.obtenerChofer(authentication))
+                .thenReturn(choferAutenticado);
+
+        when(viajeRepository.findById(1L))
+                .thenReturn(Optional.of(viaje));
+
+        assertThrows(
+                AccesoNoAutorizadoException.class,
+                () -> viajeService.buscarPorId(1L, authentication)
+        );
+
+        verify(viajeRepository).findById(1L);
+        verifyNoInteractions(viajeMapper);
+    }
+
+    @Test
     void debeIniciarViajeCuandoEstaAceptado() {
+
+        Chofer chofer = Chofer.builder()
+                .id(1L)
+                .build();
 
         Viaje viaje = Viaje.builder()
                 .id(1L)
                 .estado(EstadoViaje.ACEPTADO)
+                .chofer(chofer)
                 .build();
 
         when(viajeRepository.findById(1L))
                 .thenReturn(Optional.of(viaje));
 
-        viajeService.iniciarViaje(1L);
+        when(usuarioAutenticadoService.obtenerChofer(authentication))
+                .thenReturn(chofer);
+
+        viajeService.iniciarViaje(1L, authentication);
 
         assertEquals(
                 EstadoViaje.EN_CURSO,
@@ -335,6 +464,40 @@ class ViajeServiceTest {
 
         verify(viajeRepository)
                 .save(viaje);
+    }
+
+    @Test
+    void noDebeIniciarViajeSiPerteneceAOtroChofer() {
+
+        Chofer choferAsignado = Chofer.builder()
+                .id(1L)
+                .build();
+
+        Chofer choferAutenticado = Chofer.builder()
+                .id(2L)
+                .build();
+
+        Viaje viaje = Viaje.builder()
+                .id(1L)
+                .estado(EstadoViaje.ACEPTADO)
+                .chofer(choferAsignado)
+                .build();
+
+        when(viajeRepository.findById(1L))
+                .thenReturn(Optional.of(viaje));
+
+        when(usuarioAutenticadoService.obtenerChofer(authentication))
+                .thenReturn(choferAutenticado);
+
+        assertThrows(
+                AccesoNoAutorizadoException.class,
+                () -> viajeService.iniciarViaje(1L, authentication)
+        );
+
+        assertEquals(EstadoViaje.ACEPTADO, viaje.getEstado());
+
+        verify(viajeRepository, never())
+                .save(any(Viaje.class));
     }
 
     @Test
@@ -351,7 +514,7 @@ class ViajeServiceTest {
         TransicionEstadoViajeException excepcion =
                 assertThrows(
                         TransicionEstadoViajeException.class,
-                        () -> viajeService.iniciarViaje(1L)
+                        () -> viajeService.iniciarViaje(1L, authentication)
                 );
 
         assertEquals(
@@ -388,7 +551,10 @@ class ViajeServiceTest {
         when(viajeRepository.findById(1L))
                 .thenReturn(Optional.of(viaje));
 
-        viajeService.finalizarViaje(1L);
+        when(usuarioAutenticadoService.obtenerChofer(authentication))
+                .thenReturn(chofer);
+
+        viajeService.finalizarViaje(1L, authentication);
 
         assertEquals(
                 EstadoViaje.FINALIZADO,
@@ -410,6 +576,43 @@ class ViajeServiceTest {
                 .save(viaje);
     }
 
+    @Test
+    void noDebeFinalizarViajeSiPerteneceAOtroChofer() {
+
+        Chofer choferAsignado = Chofer.builder()
+                .id(1L)
+                .estado(EstadoChofer.OCUPADO)
+                .build();
+
+        Chofer choferAutenticado = Chofer.builder()
+                .id(2L)
+                .build();
+
+        Viaje viaje = Viaje.builder()
+                .id(1L)
+                .estado(EstadoViaje.EN_CURSO)
+                .chofer(choferAsignado)
+                .build();
+
+        when(viajeRepository.findById(1L))
+                .thenReturn(Optional.of(viaje));
+
+        when(usuarioAutenticadoService.obtenerChofer(authentication))
+                .thenReturn(choferAutenticado);
+
+        assertThrows(
+                AccesoNoAutorizadoException.class,
+                () -> viajeService.finalizarViaje(1L, authentication)
+        );
+
+        assertEquals(EstadoViaje.EN_CURSO, viaje.getEstado());
+
+        verify(choferService, never())
+                .cambiarEstado(anyLong(), any(EstadoChofer.class));
+
+        verify(viajeRepository, never())
+                .save(any(Viaje.class));
+    }
 
     @Test
     void noDebeFinalizarViajeCuandoNoEstaEnCurso() {
@@ -431,7 +634,7 @@ class ViajeServiceTest {
         TransicionEstadoViajeException excepcion =
                 assertThrows(
                         TransicionEstadoViajeException.class,
-                        () -> viajeService.finalizarViaje(1L)
+                        () -> viajeService.finalizarViaje(1L, authentication)
                 );
 
         assertEquals(
@@ -457,87 +660,100 @@ class ViajeServiceTest {
     @Test
     void debeCancelarViajeCuandoEstaSolicitado() {
 
+        String whatsappId = "5493871234567";
+
+        Cliente cliente = Cliente.builder()
+                .id(1L)
+                .whatsappId(whatsappId)
+                .build();
+
         Viaje viaje = Viaje.builder()
                 .id(1L)
+                .cliente(cliente)
                 .estado(EstadoViaje.SOLICITADO)
                 .build();
 
-        when(viajeRepository.findById(1L))
+        when(viajeRepository
+                .findByCliente_WhatsappIdAndEstadoInOrderByFechaCreacionDesc(
+                        eq(whatsappId),
+                        anyList()
+                ))
+                .thenReturn(List.of(viaje));
+
+        when(viajeRepository.buscarPorIdConBloqueo(1L))
                 .thenReturn(Optional.of(viaje));
 
-        viajeService.cancelarViaje(1L);
+        viajeService.cancelarViajePorWhatsapp(whatsappId);
 
-        assertEquals(
-                EstadoViaje.CANCELADO,
-                viaje.getEstado()
-        );
+        assertEquals(EstadoViaje.CANCELADO, viaje.getEstado());
 
-        verify(viajeRepository)
-                .findById(1L);
+        verify(ofertaViajeService).cancelarTodasLasOfertasPendientes(viaje);
+        verify(viajeRepository).save(viaje);
+     }
 
-        verify(viajeRepository)
-                .save(viaje);
+   @ParameterizedTest
+   @EnumSource(
+        value = EstadoViaje.class,
+        names = {"ACEPTADO", "EN_CURSO", "FINALIZADO", "CANCELADO"}
+   )
+   void noDebeCancelarViajeCuandoEstadoNoLoPermite(EstadoViaje estado) {
 
-        verifyNoInteractions(choferService);
-    }
+        String whatsappId = "5493871234567";
 
-    @ParameterizedTest
-    @EnumSource(
-            value = EstadoViaje.class,
-            names = {
-                    "ACEPTADO",
-                    "EN_CURSO",
-                    "FINALIZADO",
-                    "CANCELADO"
-            }
-    )
-    void noDebeCancelarViajeCuandoEstadoNoLoPermite(
-            EstadoViaje estado
-    ) {
+        Cliente cliente = Cliente.builder()
+                .id(1L)
+                .whatsappId(whatsappId)
+                .build();
 
         Viaje viaje = Viaje.builder()
                 .id(1L)
+                .cliente(cliente)
                 .estado(estado)
                 .build();
 
-        when(viajeRepository.findById(1L))
+        when(viajeRepository
+                .findByCliente_WhatsappIdAndEstadoInOrderByFechaCreacionDesc(
+                        eq(whatsappId),
+                        anyList()
+                ))
+                .thenReturn(List.of(viaje));
+
+        when(viajeRepository.buscarPorIdConBloqueo(1L))
                 .thenReturn(Optional.of(viaje));
 
-        TransicionEstadoViajeException excepcion =
-                assertThrows(
-                        TransicionEstadoViajeException.class,
-                        () -> viajeService.cancelarViaje(1L)
-                );
-
-        String mensajeEsperado = switch (estado) {
-            case ACEPTADO ->
-                    "No se puede cancelar el viaje porque el viaje ya fue aceptado por un chofer";
-            case EN_CURSO ->
-                    "No se puede cancelar el viaje porque el viaje ya está en curso";
-            case FINALIZADO ->
-                    "No se puede cancelar el viaje porque el viaje ya finalizó";
-            case CANCELADO ->
-                    "No se puede cancelar el viaje porque el viaje ya fue cancelado";
-            default ->
-                    throw new IllegalStateException("Estado no contemplado: " + estado);
-        };
-
-        assertEquals(
-                mensajeEsperado,
-                excepcion.getMessage()
+        assertThrows(
+                TransicionEstadoViajeException.class,
+                () -> viajeService.cancelarViajePorWhatsapp(whatsappId)
         );
 
-        assertEquals(
-                estado,
-                viaje.getEstado()
+        assertEquals(estado, viaje.getEstado());
+
+        verify(ofertaViajeService, never())
+                .cancelarTodasLasOfertasPendientes(any());
+
+        verify(viajeRepository, never()).save(any());
+    }
+
+    @Test
+    void noDebeCancelarCuandoElClienteNoTieneViajesActivos() {
+
+        String whatsappId = "5493871234567";
+
+        when(viajeRepository
+                .findByCliente_WhatsappIdAndEstadoInOrderByFechaCreacionDesc(
+                        eq(whatsappId),
+                        anyList()
+                ))
+                .thenReturn(List.of());
+
+        assertThrows(
+                TransicionEstadoViajeException.class,
+                () -> viajeService.cancelarViajePorWhatsapp(whatsappId)
         );
 
-        verify(viajeRepository)
-                .findById(1L);
-
-        verify(viajeRepository, never())
-                .save(any(Viaje.class));
-
-        verifyNoInteractions(choferService);
+        verify(viajeRepository, never()).buscarPorIdConBloqueo(anyLong());
+        verify(ofertaViajeService, never())
+                .cancelarTodasLasOfertasPendientes(any());
+        verify(viajeRepository, never()).save(any());
     }
 }

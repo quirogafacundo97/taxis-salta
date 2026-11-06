@@ -22,7 +22,9 @@ import java.time.OffsetDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+    "app.scheduler.initial-delay=60000"
+})
 class OfertaViajeSchedulerIntegrationTest extends PostgresIntegrationTest {
 
     @Autowired

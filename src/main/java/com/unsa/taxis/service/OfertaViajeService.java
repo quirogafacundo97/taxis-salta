@@ -17,9 +17,10 @@ import jakarta.persistence.LockModeType;
 import jakarta.persistence.PersistenceContext;
 import com.unsa.taxis.exception.OfertaVencidaException;
 import org.springframework.transaction.annotation.Propagation;
-
 import java.time.OffsetDateTime;
 import java.util.List;
+import com.unsa.taxis.dto.OfertaChoferResponse;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -39,8 +40,21 @@ public class OfertaViajeService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public OfertaViaje crearOferta(Viaje viaje, Chofer chofer) {
 
+        Viaje viajeBloqueado = viajeRepository
+                .buscarPorIdConBloqueo(viaje.getId())
+                .orElseThrow(() ->
+                        new IllegalStateException("El viaje asociado a la oferta no existe")
+                );
+
+        if (viajeBloqueado.getEstado() != EstadoViaje.SOLICITADO
+                        || viajeBloqueado.getChofer() != null) {
+                throw new OfertaNoDisponibleException(
+                        "No se pueden crear ofertas para este viaje"
+                );
+        }
+
         OfertaViaje oferta = OfertaViaje.builder()
-                .viaje(viaje)
+                .viaje(viajeBloqueado)
                 .chofer(chofer)
                 .estado(EstadoOferta.PENDIENTE)
                 .fechaExpiracion(
@@ -48,7 +62,6 @@ public class OfertaViajeService {
                                 .plusSeconds(TIEMPO_EXPIRACION_SEGUNDOS)
                 )
                 .build();
-
         return ofertaViajeRepository.save(oferta);
     }
 
@@ -129,6 +142,13 @@ public class OfertaViajeService {
     entityManager.refresh(oferta, LockModeType.PESSIMISTIC_WRITE);
 
     validarOfertaDisponible(oferta);
+
+    if (viaje.getEstado() != EstadoViaje.SOLICITADO) {
+        throw new OfertaNoDisponibleException(
+                "El viaje ya no está disponible para aceptar ofertas"
+        );
+    }
+
 
     // Verificamos que el viaje siga sin asignar.
     if (viaje.getChofer() != null) {
@@ -242,4 +262,60 @@ public class OfertaViajeService {
                         OffsetDateTime.now()
                 );
     }
+
+    public List<OfertaViaje> listarOfertasPendientesPorChofer(Long choferId) {
+        return ofertaViajeRepository
+                .findByChofer_IdAndEstadoAndFechaExpiracionAfter(
+                        choferId,
+                        EstadoOferta.PENDIENTE,
+                        OffsetDateTime.now()
+                );
+    }
+
+   public List<OfertaChoferResponse> listarOfertasPendientesResponsePorChofer(
+        Long choferId) {
+
+        return listarOfertasPendientesPorChofer(choferId)
+                .stream()
+                .map(oferta -> {
+                        Viaje viaje = oferta.getViaje();
+                        Cliente cliente = viaje.getCliente();
+
+                        return OfertaChoferResponse.builder()
+                                .ofertaId(oferta.getId())
+                                .viajeId(viaje.getId())
+                                .clienteNombre(cliente.getNombre())
+                                .whatsappId(cliente.getWhatsappId())
+                                .direccionOrigen(viaje.getDireccionOrigen())
+                                .latitudOrigen(viaje.getLatitudOrigen())
+                                .longitudOrigen(viaje.getLongitudOrigen())
+                                .direccionDestino(viaje.getDireccionDestino())
+                                .latitudDestino(viaje.getLatitudDestino())
+                                .longitudDestino(viaje.getLongitudDestino())
+                                .tipoTarifa(viaje.getTipoTarifa())
+                                .costoEstimado(viaje.getCostoEstimado())
+                                .rutaGeometria(viaje.getRutaGeometria())
+                                .distanciaMetros(viaje.getDistanciaMetros())
+                                .duracionSegundos(viaje.getDuracionSegundos())
+                                .fechaEnvio(oferta.getFechaEnvio())
+                                .fechaExpiracion(oferta.getFechaExpiracion())
+                                .build();
+                })
+                .collect(Collectors.toList());
+   }
+
+   @Transactional
+   public void cancelarTodasLasOfertasPendientes(Viaje viaje) {
+
+        List<OfertaViaje> ofertasPendientes =
+                ofertaViajeRepository.findByViajeIdAndEstado(
+                        viaje.getId(),
+                        EstadoOferta.PENDIENTE
+                );
+
+         for (OfertaViaje oferta : ofertasPendientes) {
+             oferta.setEstado(EstadoOferta.CANCELADA);
+             ofertaViajeRepository.save(oferta);
+        }
+   }
 }

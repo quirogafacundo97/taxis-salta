@@ -16,7 +16,11 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.unsa.taxis.config.SecurityConfig;
+import org.springframework.context.annotation.Import;
+
 @WebMvcTest(WhatsAppWebhookController.class)
+@Import(SecurityConfig.class)
 class WhatsAppWebhookControllerTest {
 
     @Autowired

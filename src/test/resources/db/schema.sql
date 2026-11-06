@@ -161,13 +161,26 @@ CREATE TABLE usuarios (
     email VARCHAR(100) UNIQUE,
     nombre_completo VARCHAR(120),
     activo BOOLEAN NOT NULL DEFAULT TRUE,
-    fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    debe_cambiar_password BOOLEAN NOT NULL DEFAULT TRUE,
+    chofer_id BIGINT UNIQUE,
+    fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_usuario_chofer
+        FOREIGN KEY (chofer_id)
+        REFERENCES choferes(id)
+        ON DELETE RESTRICT
 );
 
 CREATE TABLE roles (
     id BIGSERIAL PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL UNIQUE
 );
+
+INSERT INTO roles (nombre)
+VALUES
+    ('ROLE_ADMIN'),
+    ('ROLE_AUDITOR_AMT'),
+    ('ROLE_CHOFER');
 
 CREATE TABLE usuarios_roles (
     usuario_id BIGINT NOT NULL,

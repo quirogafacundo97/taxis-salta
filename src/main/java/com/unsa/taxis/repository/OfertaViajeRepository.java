@@ -25,6 +25,12 @@ public interface OfertaViajeRepository
 
     List<OfertaViaje> findByViajeId(Long viajeId);
 
+    List<OfertaViaje> findByChofer_IdAndEstadoAndFechaExpiracionAfter(
+        Long choferId,
+        EstadoOferta estado,
+        OffsetDateTime fecha
+    );
+
     List<OfertaViaje> findByEstadoAndFechaExpiracionLessThanEqual(
             EstadoOferta estado,
             OffsetDateTime fecha

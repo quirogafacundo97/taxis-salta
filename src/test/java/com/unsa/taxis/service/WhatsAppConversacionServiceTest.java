@@ -7,6 +7,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.unsa.taxis.exception.TransicionEstadoViajeException;
+
+import static org.mockito.Mockito.doThrow;
+
 class WhatsAppConversacionServiceTest {
 
     @Test
@@ -15,12 +19,15 @@ class WhatsAppConversacionServiceTest {
         TokenSolicitudViajeService tokenService =
                 mock(TokenSolicitudViajeService.class);
 
+        ViajeService viajeService = mock(ViajeService.class);
+
         when(tokenService.generarToken("5493870000000"))
                 .thenReturn("tokenPrueba123");
 
         WhatsAppConversacionService conversacionService =
                 new WhatsAppConversacionService(
                         whatsAppService,
+                        viajeService,
                         tokenService,
                         "http://localhost:3000"
                 );
@@ -50,9 +57,12 @@ class WhatsAppConversacionServiceTest {
         TokenSolicitudViajeService tokenService =
                 mock(TokenSolicitudViajeService.class);
 
+        ViajeService viajeService = mock(ViajeService.class);
+
         WhatsAppConversacionService conversacionService =
                 new WhatsAppConversacionService(
                         whatsAppService,
+                        viajeService,
                         tokenService,
                         "http://localhost:3000"
                 );
@@ -79,9 +89,12 @@ class WhatsAppConversacionServiceTest {
         TokenSolicitudViajeService tokenService =
                 mock(TokenSolicitudViajeService.class);
 
+        ViajeService viajeService = mock(ViajeService.class);
+
         WhatsAppConversacionService conversacionService =
                 new WhatsAppConversacionService(
                         whatsAppService,
+                        viajeService,
                         tokenService,
                         "http://localhost:3000"
                 );
@@ -101,4 +114,76 @@ class WhatsAppConversacionServiceTest {
                 "Por ahora, escribí «Quiero un taxi» para iniciar una solicitud."
         );
     }
+
+    @Test
+    void debeCancelarElViajeCuandoElPasajeroLoSolicitaPorWhatsApp() {
+
+        WhatsAppService whatsAppService = mock(WhatsAppService.class);
+        TokenSolicitudViajeService tokenService =
+                mock(TokenSolicitudViajeService.class);
+        ViajeService viajeService = mock(ViajeService.class);
+
+        WhatsAppConversacionService conversacionService =
+                new WhatsAppConversacionService(
+                        whatsAppService,
+                        viajeService,
+                        tokenService,
+                        "http://localhost:3000"
+                );
+
+        WhatsAppWebhookService.MensajeEntrante mensaje =
+                new WhatsAppWebhookService.MensajeEntrante(
+                        "5493870000000",
+                        "wamid.TEST126",
+                        "text",
+                        "Cancelar"
+                );
+
+        conversacionService.procesarMensaje(mensaje);
+
+        verify(viajeService).cancelarViajePorWhatsapp("5493870000000");
+
+        verify(whatsAppService).enviarMensajeTexto(
+                "5493870000000",
+                "Tu viaje fue cancelado correctamente."
+        );
+     }
+
+     @Test
+     void debeInformarCuandoNoSePuedeCancelarElViaje() {
+
+        WhatsAppService whatsAppService = mock(WhatsAppService.class);
+        TokenSolicitudViajeService tokenService =
+                mock(TokenSolicitudViajeService.class);
+        ViajeService viajeService = mock(ViajeService.class);
+
+        doThrow(new TransicionEstadoViajeException(
+                "No se puede cancelar el viaje porque ya fue aceptado o está en curso."
+        )).when(viajeService).cancelarViajePorWhatsapp("5493870000000");
+
+        WhatsAppConversacionService conversacionService =
+                new WhatsAppConversacionService(
+                        whatsAppService,
+                        viajeService,
+                        tokenService,
+                        "http://localhost:3000"
+                );
+
+        WhatsAppWebhookService.MensajeEntrante mensaje =
+                new WhatsAppWebhookService.MensajeEntrante(
+                        "5493870000000",
+                        "wamid.TEST127",
+                        "text",
+                        "Cancelar"
+                );
+
+        conversacionService.procesarMensaje(mensaje);
+
+        verify(viajeService).cancelarViajePorWhatsapp("5493870000000");
+
+        verify(whatsAppService).enviarMensajeTexto(
+                "5493870000000",
+                "No se puede cancelar el viaje porque ya fue aceptado o está en curso."
+        );
+     }
 }

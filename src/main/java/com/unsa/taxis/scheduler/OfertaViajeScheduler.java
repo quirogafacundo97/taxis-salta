@@ -16,7 +16,11 @@ public class OfertaViajeScheduler {
 
     private final OfertaViajeService ofertaViajeService;
 
-    @Scheduled(fixedDelay = 1000)
+    @Scheduled(
+    fixedDelay = 1000,
+    initialDelayString = "${app.scheduler.initial-delay:0}"
+    )
+
     public void procesarOfertasExpiradas() {
 
         List<OfertaViaje> ofertasExpiradas =

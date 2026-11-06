@@ -121,6 +121,9 @@ class OfertaViajeServiceTest {
 
         OffsetDateTime antes = OffsetDateTime.now();
 
+        when(viajeRepository.buscarPorIdConBloqueo(viaje.getId()))
+                .thenReturn(Optional.of(viaje));
+
         OfertaViaje oferta =
                 ofertaViajeService.crearOferta(viaje, chofer);
 
@@ -141,6 +144,25 @@ class OfertaViajeServiceTest {
         ));
 
         verify(ofertaViajeRepository).save(oferta);
+
+        verify(viajeRepository).buscarPorIdConBloqueo(viaje.getId());
+    }
+
+    @Test
+    void noDebeCrearOfertaParaUnViajeCancelado() {
+
+        viaje.setEstado(EstadoViaje.CANCELADO);
+
+        when(viajeRepository.buscarPorIdConBloqueo(viaje.getId()))
+                .thenReturn(Optional.of(viaje));
+
+        assertThrows(
+                OfertaNoDisponibleException.class,
+                () -> ofertaViajeService.crearOferta(viaje, chofer)
+        );
+
+        verify(ofertaViajeRepository, never())
+                .save(any(OfertaViaje.class));
     }
 
     @Test
@@ -353,6 +375,46 @@ class OfertaViajeServiceTest {
                 choferAsignado,
                 viaje.getChofer()
         );
+
+        verify(ofertaViajeRepository, never())
+                .save(any(OfertaViaje.class));
+    }
+
+    @Test
+    void noDebeAceptarOfertaDeUnViajeCancelado() {
+
+        viaje.setEstado(EstadoViaje.CANCELADO);
+
+        OfertaViaje oferta = OfertaViaje.builder()
+                .id(1L)
+                .viaje(viaje)
+                .chofer(chofer)
+                .estado(EstadoOferta.PENDIENTE)
+                .fechaEnvio(OffsetDateTime.now())
+                .fechaExpiracion(OffsetDateTime.now().plusSeconds(10))
+                .build();
+
+        when(ofertaViajeRepository.findById(1L))
+                .thenReturn(Optional.of(oferta));
+
+        configurarBloqueos(oferta);
+
+        assertThrows(
+                OfertaNoDisponibleException.class,
+                () -> ofertaViajeService.aceptarOferta(1L)
+        );
+
+        assertEquals(
+                EstadoOferta.PENDIENTE,
+                oferta.getEstado()
+        );
+
+        assertEquals(
+                EstadoViaje.CANCELADO,
+                viaje.getEstado()
+        );
+
+        assertNull(viaje.getChofer());
 
         verify(ofertaViajeRepository, never())
                 .save(any(OfertaViaje.class));

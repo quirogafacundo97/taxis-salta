@@ -9,17 +9,32 @@ import org.springframework.web.bind.annotation.*;
 import com.unsa.taxis.dto.ActualizarUbicacionRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.RequestParam;
+import com.unsa.taxis.dto.OfertaChoferResponse;
+import com.unsa.taxis.service.OfertaViajeService;
 
 import java.util.List;
+
+import com.unsa.taxis.service.UsuarioAutenticadoService;
+
+import org.springframework.security.core.Authentication;
+import com.unsa.taxis.exception.AccesoNoAutorizadoException;
 
 @RestController
 @RequestMapping("/api/choferes")
 public class ChoferController {
 
     private final ChoferService choferService;
+    private final OfertaViajeService ofertaViajeService;
+    private final UsuarioAutenticadoService usuarioAutenticadoService;
 
-    public ChoferController(ChoferService choferService) {
+    public ChoferController(
+            ChoferService choferService,
+            OfertaViajeService ofertaViajeService,
+            UsuarioAutenticadoService usuarioAutenticadoService) {
+
         this.choferService = choferService;
+        this.ofertaViajeService = ofertaViajeService;
+        this.usuarioAutenticadoService = usuarioAutenticadoService;
     }
 
     @GetMapping
@@ -62,10 +77,19 @@ public class ChoferController {
     @PutMapping("/{id}/ubicacion")
     public ResponseEntity<Chofer> actualizarUbicacion(
             @PathVariable Long id,
-            @Valid @RequestBody ActualizarUbicacionRequest request) {
+            @Valid @RequestBody ActualizarUbicacionRequest request,
+            Authentication authentication) {
+
+        Chofer choferAutenticado = usuarioAutenticadoService.obtenerChofer(authentication);
+
+        if (!choferAutenticado.getId().equals(id)) {
+                throw new AccesoNoAutorizadoException(
+                        "No tenés autorización para modificar la ubicación de otro chofer"
+                );
+        }
 
         Chofer chofer = choferService.actualizarUbicacion(
-                id,
+                choferAutenticado.getId(),
                 request.getLatitud(),
                 request.getLongitud()
         );
@@ -76,17 +100,42 @@ public class ChoferController {
     @PutMapping("/{id}/estado")
     public ResponseEntity<Chofer> cambiarEstado(
             @PathVariable Long id,
-            @Valid @RequestBody CambiarEstadoChoferRequest request) {
+            @Valid @RequestBody CambiarEstadoChoferRequest request,
+            Authentication authentication) {
+
+        Chofer choferAutenticado = usuarioAutenticadoService.obtenerChofer(authentication);
+
+        if (!choferAutenticado.getId().equals(id)) {
+                throw new AccesoNoAutorizadoException(
+                        "No tenés autorización para modificar el estado de otro chofer"
+                );
+        }
 
         Chofer chofer = choferService.cambiarEstado(
-                id,
+                choferAutenticado.getId(),
                 request.getEstado()
         );
 
         return ResponseEntity.ok(chofer);
     }
 
+    @GetMapping("/{id}/ofertas")
+    public ResponseEntity<List<OfertaChoferResponse>> obtenerOfertasPendientes(
+            @PathVariable Long id,
+            Authentication authentication) {
 
+        Chofer choferAutenticado = usuarioAutenticadoService.obtenerChofer(authentication);
+
+        if (!choferAutenticado.getId().equals(id)) {
+                throw new AccesoNoAutorizadoException(
+                        "No tenés autorización para consultar las ofertas de otro chofer"
+                );
+        }
+
+        return ResponseEntity.ok(
+                ofertaViajeService.listarOfertasPendientesResponsePorChofer(choferAutenticado.getId())
+        );
+    }
 
 
 }

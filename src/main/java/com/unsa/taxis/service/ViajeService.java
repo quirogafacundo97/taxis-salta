@@ -14,11 +14,14 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.unsa.taxis.exception.TokenSolicitudViajeInvalidoException;
+import com.unsa.taxis.exception.AccesoNoAutorizadoException;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
+
+import org.springframework.security.core.Authentication;
 
 @Service
 @RequiredArgsConstructor
@@ -31,7 +34,9 @@ public class ViajeService {
     private final CalculadorCostoService calculadorCostoService;
     private final ViajeMapper viajeMapper;
     private final ChoferService choferService;
+    private final OfertaViajeService ofertaViajeService;
     private final ApplicationEventPublisher eventPublisher;
+    private final UsuarioAutenticadoService usuarioAutenticadoService;
 
     @Transactional
     public ViajeResponse crearViaje(CrearViajeRequest request) {
@@ -52,7 +57,7 @@ public class ViajeService {
 
                     return clienteRepository.save(nuevoCliente);
                 });
-         
+
         // 3. Obtener fecha y hora actual
         OffsetDateTime ahora = OffsetDateTime.now(
                 ZoneId.of("America/Argentina/Salta")
@@ -97,10 +102,29 @@ public class ViajeService {
         return viajeMapper.toResponse(viajeGuardado);
     }
 
-    public ViajeResponse buscarPorId(Long id) {
+    public ViajeResponse buscarPorId(Long id, Authentication authentication) {
+
+        boolean esAdmin = authentication != null
+                && authentication.getAuthorities().stream()
+                        .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+
+        Chofer choferAutenticado = null;
+
+        if (!esAdmin) {
+                choferAutenticado = usuarioAutenticadoService.obtenerChofer(authentication);
+        }
 
         Viaje viaje = viajeRepository.findById(id)
                 .orElseThrow(() -> new ViajeNoEncontradoException(id));
+
+        if (!esAdmin && (
+                viaje.getChofer() == null
+                || !viaje.getChofer().getId().equals(choferAutenticado.getId())
+        )) {
+                throw new AccesoNoAutorizadoException(
+                        "No tenés autorización para consultar este viaje"
+                );
+        }
 
         return viajeMapper.toResponse(viaje);
     }
@@ -111,7 +135,7 @@ public class ViajeService {
                 .orElseThrow(() -> new ViajeNoEncontradoException(id));
     }
 
-    public void iniciarViaje(Long viajeId) {
+    public void iniciarViaje(Long viajeId, Authentication authentication) {
 
         Viaje viaje = buscarEntidadPorId(viajeId);
 
@@ -121,12 +145,14 @@ public class ViajeService {
             );
         }
 
+        validarChoferAsignado(viaje, authentication);
+
         viaje.setEstado(EstadoViaje.EN_CURSO);
 
         viajeRepository.save(viaje);
     }
 
-    public void finalizarViaje(Long viajeId) {
+    public void finalizarViaje(Long viajeId, Authentication authentication) {
         Viaje viaje = buscarEntidadPorId(viajeId);
 
         if (viaje.getEstado() != EstadoViaje.EN_CURSO) {
@@ -134,6 +160,8 @@ public class ViajeService {
                     "No se puede finalizar el viaje porque no está en curso"
             );
         }
+
+        validarChoferAsignado(viaje, authentication);
 
         viaje.setEstado(EstadoViaje.FINALIZADO);
 
@@ -152,32 +180,65 @@ public class ViajeService {
                 .toList();
     }
 
-    public void cancelarViaje(Long viajeId) {
+    @Transactional
+    public void cancelarViajePorWhatsapp(String whatsappId) {
 
-        Viaje viaje = buscarEntidadPorId(viajeId);
+        List<EstadoViaje> estadosActivos = List.of(
+                EstadoViaje.SOLICITADO,
+                EstadoViaje.ACEPTADO,
+                EstadoViaje.EN_CURSO
+        );
+
+        List<Viaje> viajesActivos =
+                viajeRepository.findByCliente_WhatsappIdAndEstadoInOrderByFechaCreacionDesc(
+                        whatsappId,
+                        estadosActivos
+                );
+
+        if (viajesActivos.isEmpty()) {
+                throw new TransicionEstadoViajeException(
+                         "No tenés viajes activos para cancelar."
+                );
+        }
+
+        Long viajeId = viajesActivos.get(0).getId();
+
+        Viaje viaje = viajeRepository.buscarPorIdConBloqueo(viajeId)
+                .orElseThrow(() -> new ViajeNoEncontradoException(viajeId));
+
+        // Verificamos nuevamente que el viaje pertenezca al remitente.
+        if (!viaje.getCliente().getWhatsappId().equals(whatsappId)) {
+                throw new TransicionEstadoViajeException(
+                        "No tenés viajes activos para cancelar."
+                );
+        }
 
         if (viaje.getEstado() != EstadoViaje.SOLICITADO) {
-
-            String motivo = switch (viaje.getEstado()) {
-                case ACEPTADO ->
-                        "el viaje ya fue aceptado por un chofer";
-                case EN_CURSO ->
-                        "el viaje ya está en curso";
-                case FINALIZADO ->
-                        "el viaje ya finalizó";
-                case CANCELADO ->
-                        "el viaje ya fue cancelado";
-                default ->
-                        "el estado actual del viaje no permite cancelarlo";
-            };
-
-            throw new TransicionEstadoViajeException(
-                    "No se puede cancelar el viaje porque " + motivo
-            );
+                throw new TransicionEstadoViajeException(
+                        "No se puede cancelar el viaje porque ya fue aceptado o está en curso."
+                );
         }
 
         viaje.setEstado(EstadoViaje.CANCELADO);
 
+        ofertaViajeService.cancelarTodasLasOfertasPendientes(viaje);
+
         viajeRepository.save(viaje);
-    }
+     }
+
+     private void validarChoferAsignado(
+                Viaje viaje,
+                Authentication authentication) {
+
+        Chofer choferAutenticado =
+                usuarioAutenticadoService.obtenerChofer(authentication);
+
+        if (viaje.getChofer() == null
+                || !viaje.getChofer().getId().equals(choferAutenticado.getId())) {
+
+            throw new AccesoNoAutorizadoException(
+                        "No tenés autorización para gestionar este viaje"
+            );
+        }
+     }
 }

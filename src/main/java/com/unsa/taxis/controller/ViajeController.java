@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.security.core.Authentication;
+
 import java.util.List;
 
 @RestController
@@ -30,10 +32,10 @@ public class ViajeController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ViajeResponse> buscarPorId(@PathVariable Long id) {
+    public ResponseEntity<ViajeResponse> buscarPorId(@PathVariable Long id, Authentication authentication) {
 
         return ResponseEntity.ok(
-                viajeService.buscarPorId(id)
+                viajeService.buscarPorId(id, authentication)
         );
     }
 
@@ -46,24 +48,23 @@ public class ViajeController {
     }
 
     @PutMapping("/{id}/iniciar")
-    public ResponseEntity<Void> iniciarViaje(@PathVariable Long id) {
+    public ResponseEntity<Void> iniciarViaje(
+            @PathVariable Long id,
+            Authentication authentication) {
 
-        viajeService.iniciarViaje(id);
+        viajeService.iniciarViaje(id, authentication);
 
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{id}/finalizar")
-    public ResponseEntity<Void> finalizarViaje(@PathVariable Long id) {
-        viajeService.finalizarViaje(id);
-        return ResponseEntity.noContent().build();
-    }
+    public ResponseEntity<Void> finalizarViaje(
+            @PathVariable Long id,
+            Authentication authentication) {
 
-    @PutMapping("/{id}/cancelar")
-    public ResponseEntity<Void> cancelarViaje(@PathVariable Long id) {
-
-        viajeService.cancelarViaje(id);
+        viajeService.finalizarViaje(id, authentication);
 
         return ResponseEntity.noContent().build();
     }
+
 }

@@ -7,6 +7,9 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import com.unsa.taxis.model.EstadoViaje;
+import java.util.Collection;
+import java.util.List;
 
 import java.util.Optional;
 
@@ -17,4 +20,9 @@ public interface ViajeRepository extends JpaRepository<Viaje, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT v FROM Viaje v WHERE v.id = :id")
     Optional<Viaje> buscarPorIdConBloqueo(@Param("id") Long id);
+
+    List<Viaje> findByCliente_WhatsappIdAndEstadoInOrderByFechaCreacionDesc(
+        String whatsappId,
+        Collection<EstadoViaje> estados
+    );
 }

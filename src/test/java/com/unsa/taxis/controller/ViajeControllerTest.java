@@ -24,7 +24,13 @@ import org.springframework.http.MediaType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
+import com.unsa.taxis.config.SecurityConfig;
+import org.springframework.context.annotation.Import;
+
+import org.springframework.security.test.context.support.WithMockUser;
+
 @WebMvcTest(ViajeController.class)
+@Import(SecurityConfig.class)
 class ViajeControllerTest {
 
     @Autowired
@@ -37,10 +43,13 @@ class ViajeControllerTest {
     private ViajeService viajeService;
 
     @Test
+    @WithMockUser(username = "admin", authorities = "ROLE_ADMIN")
     void debeRetornar404CuandoNoExisteElViaje() throws Exception {
 
-        when(viajeService.buscarPorId(999L))
-                .thenThrow(new ViajeNoEncontradoException(999L));
+         when(viajeService.buscarPorId(
+                org.mockito.ArgumentMatchers.eq(999L),
+                any(org.springframework.security.core.Authentication.class)
+        )).thenThrow(new ViajeNoEncontradoException(999L));
 
         mockMvc.perform(get("/api/viajes/999"))
                 .andExpect(status().isNotFound())
@@ -51,37 +60,31 @@ class ViajeControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "12345678", authorities = "ROLE_CHOFER")
     void debeIniciarViajeCorrectamente() throws Exception {
 
         mockMvc.perform(put("/api/viajes/1/iniciar"))
                 .andExpect(status().isNoContent());
 
-        verify(viajeService).iniciarViaje(1L);
+        verify(viajeService).iniciarViaje(
+                org.mockito.ArgumentMatchers.eq(1L),
+                any(org.springframework.security.core.Authentication.class)
+        );
     }
 
     @Test
+    @WithMockUser(username = "12345678", authorities = "ROLE_CHOFER")
     void debeFinalizarViajeCorrectamente() throws Exception {
 
-        mockMvc.perform(
-                        put("/api/viajes/1/finalizar")
-                )
+        mockMvc.perform(put("/api/viajes/1/finalizar"))
                 .andExpect(status().isNoContent());
 
-        verify(viajeService)
-                .finalizarViaje(1L);
+        verify(viajeService).finalizarViaje(
+                org.mockito.ArgumentMatchers.eq(1L),
+                any(org.springframework.security.core.Authentication.class)
+        );
     }
 
-    @Test
-    void debeCancelarViajeCorrectamente() throws Exception {
-
-        mockMvc.perform(
-                        put("/api/viajes/1/cancelar")
-                )
-                .andExpect(status().isNoContent());
-
-        verify(viajeService)
-                .cancelarViaje(1L);
-    }
     
     @Test
     void debeRetornar400CuandoElTokenEsInvalido() throws Exception {
