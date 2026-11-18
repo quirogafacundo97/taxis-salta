@@ -32,6 +32,8 @@ import org.springframework.security.core.Authentication;
 
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
+import com.unsa.taxis.dto.CrearViajeResponse;
+
 @ExtendWith(MockitoExtension.class)
 class ViajeServiceTest {
 
@@ -55,6 +57,9 @@ class ViajeServiceTest {
 
     @Mock
     private TokenSolicitudViajeService tokenSolicitudViajeService;
+
+    @Mock
+    private TokenSeguimientoService tokenSeguimientoService;
 
     @InjectMocks
     private ViajeService viajeService;
@@ -106,6 +111,16 @@ class ViajeServiceTest {
         // Simulamos que el cálculo dio $1412
         BigDecimal costoEstimado = new BigDecimal("1412.00");
 
+        TokenSeguimientoService.DatosTokenSeguimiento datosToken =
+        new TokenSeguimientoService.DatosTokenSeguimiento(
+                "tokenSeguimientoPrueba",
+                "hashSeguimientoPrueba",
+                java.time.OffsetDateTime.parse("2026-11-11T12:00:00-03:00")
+        );
+
+        when(tokenSeguimientoService.generarToken())
+                .thenReturn(datosToken);
+
         // Configuramos los mocks
         when(clienteRepository.findByWhatsappId("5493875551234"))
                 .thenReturn(Optional.of(cliente));
@@ -145,7 +160,7 @@ class ViajeServiceTest {
                 .thenReturn(Optional.of("5493875551234"));
 
         // Ejecutamos el metodo REAL que estamos probando
-        ViajeResponse resultado = viajeService.crearViaje(request);
+        CrearViajeResponse resultado = viajeService.crearViaje(request);
 
         // Verificaciones
         assertNotNull(resultado);
@@ -155,6 +170,7 @@ class ViajeServiceTest {
         assertEquals("Plaza 9 de Julio, Salta", resultado.getDireccionDestino());
         assertEquals(TipoTarifa.NOCTURNA, resultado.getTipoTarifa());
         assertEquals(new BigDecimal("1412.00"), resultado.getCostoEstimado());
+        assertEquals("tokenSeguimientoPrueba", resultado.getTokenSeguimiento());
 
         verify(clienteRepository)
                 .findByWhatsappId("5493875551234");
@@ -177,6 +193,16 @@ class ViajeServiceTest {
         verify(viajeRepository).save(viajeCaptor.capture());
 
         Viaje viajeGuardado = viajeCaptor.getValue();
+
+        assertEquals(
+                "hashSeguimientoPrueba",
+                viajeGuardado.getTokenSeguimientoHash()
+        );
+
+        assertEquals(
+                datosToken.fechaExpiracion(),
+                viajeGuardado.getTokenSeguimientoExpiraEn()
+        );
 
         assertEquals(
                 "{\"type\":\"LineString\",\"coordinates\":[[-65.4100,-24.7885],[-65.4105,-24.7875]]}",
@@ -220,6 +246,16 @@ class ViajeServiceTest {
 
         BigDecimal costoEstimado = new BigDecimal("1412.00");
 
+        TokenSeguimientoService.DatosTokenSeguimiento datosToken =
+                new TokenSeguimientoService.DatosTokenSeguimiento(
+                        "tokenSeguimientoNuevo",
+                        "hashSeguimientoNuevo",
+                        java.time.OffsetDateTime.parse("2026-11-11T12:00:00-03:00")
+                );
+
+        when(tokenSeguimientoService.generarToken())
+                .thenReturn(datosToken);
+
         // El cliente NO existe
         when(clienteRepository.findByWhatsappId("5493875999999"))
                 .thenReturn(Optional.empty());
@@ -262,7 +298,7 @@ class ViajeServiceTest {
                 .thenReturn(Optional.of("5493875999999"));
 
         // Ejecutamos el servicio REAL
-        ViajeResponse resultado = viajeService.crearViaje(request);
+        CrearViajeResponse resultado = viajeService.crearViaje(request);
 
         // Verificamos el resultado
         assertNotNull(resultado);
@@ -270,6 +306,9 @@ class ViajeServiceTest {
         assertEquals("Carlos", resultado.getClienteNombre());
         assertEquals(new BigDecimal("1412.00"),
                 resultado.getCostoEstimado());
+        assertEquals("tokenSeguimientoNuevo", resultado.getTokenSeguimiento());
+
+        verify(tokenSeguimientoService).generarToken();
 
         // Verificamos que se buscó al cliente
         verify(clienteRepository)

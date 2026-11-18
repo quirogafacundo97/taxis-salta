@@ -1,11 +1,26 @@
 
-
-const API_BASE_URL = "https://taxis-salta-production.up.railway.app";
+const API_BASE_URL = "https://api-taxisalta.duckdns.org";
 
 const parametrosUrl = new URLSearchParams(window.location.search);
 const tokenSolicitud = parametrosUrl.get("token");
 
 const formulario = document.getElementById("formulario-viaje");
+
+const pantallaSeguimiento = document.getElementById("pantalla-seguimiento");
+
+const estadoSeguimiento = document.getElementById("estado-seguimiento");
+
+const datosChofer = document.getElementById("datos-chofer");
+
+const choferNombre = document.getElementById("chofer-nombre");
+
+const vehiculoDescripcion = document.getElementById("vehiculo-descripcion");
+
+const vehiculoPatente = document.getElementById("vehiculo-patente");
+
+const vehiculoLicencia = document.getElementById("vehiculo-licencia");
+
+let intervaloSeguimiento = null;
 
 const pasoOrigen = document.getElementById("paso-origen");
 const pasoDestino = document.getElementById("paso-destino");
@@ -252,10 +267,39 @@ formulario.addEventListener("submit", async (evento) => {
             );
         }
 
-        mensaje.textContent =
-            "¡Solicitud enviada correctamente! Tu pedido fue registrado.";
+        if (!resultado?.tokenSeguimiento) {
+            formulario.hidden = true;
+            pantallaSeguimiento.hidden = false;
 
-        botonSolicitar.textContent = "Solicitud enviada";
+            estadoSeguimiento.textContent =
+                "Tu solicitud fue registrada, pero no pudimos obtener el token de seguimiento. No vuelvas a solicitar el viaje.";
+
+            mensaje.textContent = "";
+
+            return;
+        }
+
+        sessionStorage.setItem(
+            "tokenSeguimiento",
+            resultado.tokenSeguimiento
+        );
+
+        clearInterval(intervaloSeguimiento);
+
+        intervaloSeguimiento = setInterval(
+            consultarSeguimiento,
+            5000
+        );
+
+
+        formulario.hidden = true;
+        pantallaSeguimiento.hidden = false;
+
+        estadoSeguimiento.textContent =
+            "Tu solicitud fue registrada. Buscando chofer...";
+
+        mensaje.textContent = "";
+        consultarSeguimiento();
     } catch (error) {
         console.error("Error al solicitar el viaje:", error);
 
@@ -396,7 +440,94 @@ let indiceRutaSeleccionada = 0;
 
 const mapa = L.map("mapa").setView([-24.7829, -65.4232], 14);
 
+let consultaSeguimientoEnCurso = false;
 
+async function consultarSeguimiento() {
+    if (consultaSeguimientoEnCurso) {
+        return;
+    }
+
+    consultaSeguimientoEnCurso = true;
+
+    try {
+
+        const token = sessionStorage.getItem("tokenSeguimiento");
+
+        if (!token) {
+            clearInterval(intervaloSeguimiento);
+            intervaloSeguimiento = null;
+
+            estadoSeguimiento.textContent =
+                "No encontramos el token para consultar el seguimiento.";
+            return;
+        }
+
+        const respuesta = await fetch(
+            `${API_BASE_URL}/api/viajes/seguimiento`,
+            {
+                method: "GET",
+                headers: {
+                    "X-Token-Seguimiento": token
+                }
+            }
+        );
+
+        if (respuesta.status === 404) {
+            clearInterval(intervaloSeguimiento);
+            intervaloSeguimiento = null;
+
+            estadoSeguimiento.textContent =
+                "El seguimiento de este viaje ya no está disponible.";
+            return;
+        }
+
+        if (!respuesta.ok) {
+            throw new Error(`HTTP ${respuesta.status}`);
+        }
+
+        const resultado = await respuesta.json();
+
+        if (resultado.estado === "SOLICITADO") {
+            estadoSeguimiento.textContent = "Buscando chofer...";
+            datosChofer.hidden = true;
+            return;
+        }
+
+        if (
+            resultado.estado === "ACEPTADO" ||
+            resultado.estado === "EN_CURSO"
+        ) {
+            datosChofer.hidden = false;
+
+            choferNombre.textContent =
+                `${resultado.choferNombre ?? ""} ${resultado.choferApellido ?? ""}`.trim();
+
+            vehiculoDescripcion.textContent =
+                `${resultado.vehiculoMarca ?? ""} ${resultado.vehiculoModelo ?? ""}`.trim();
+
+            vehiculoPatente.textContent =
+                resultado.vehiculoPatente ?? "No disponible";
+
+            vehiculoLicencia.textContent =
+                resultado.vehiculoLicencia ?? "No disponible";
+
+            estadoSeguimiento.textContent =
+                resultado.estado === "ACEPTADO"
+                    ? "¡Un chofer aceptó tu viaje!"
+                    : "Tu viaje está en curso.";
+
+            return;
+        }
+
+    } catch (error) {
+        console.error("Error al consultar el seguimiento:", error);
+
+        estadoSeguimiento.textContent =
+            "No pudimos actualizar el seguimiento. Vamos a intentarlo nuevamente.";
+    } finally {
+        consultaSeguimientoEnCurso = false;
+    }
+}
 
 async function calcularRuta() {
     if (coordenadasOrigen === null || coordenadasDestino === null) {
@@ -761,4 +892,22 @@ mostrarPaso(0);
 if (!tokenSolicitud) {
     mensaje.textContent =
         "Para solicitar un taxi, iniciá la conversación desde WhatsApp y abrí el enlace que te enviamos.";
+}
+
+const tokenSeguimientoGuardado =
+    sessionStorage.getItem("tokenSeguimiento");
+
+if (tokenSeguimientoGuardado) {
+    formulario.hidden = true;
+    pantallaSeguimiento.hidden = false;
+
+    estadoSeguimiento.textContent =
+        "Recuperando el seguimiento...";
+
+    consultarSeguimiento();
+
+    intervaloSeguimiento = setInterval(
+        consultarSeguimiento,
+        5000
+    );
 }

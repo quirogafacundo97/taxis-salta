@@ -25,4 +25,6 @@ public interface ViajeRepository extends JpaRepository<Viaje, Long> {
         String whatsappId,
         Collection<EstadoViaje> estados
     );
+
+    Optional<Viaje> findByTokenSeguimientoHash(String tokenSeguimientoHash);
 }

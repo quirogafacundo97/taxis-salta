@@ -71,6 +71,12 @@ public class Viaje {
     @Column(name = "duracion_segundos")
     private Integer duracionSegundos;
 
+    @Column(name = "token_seguimiento_hash", length = 64)
+    private String tokenSeguimientoHash;
+
+    @Column(name = "token_seguimiento_expira_en")
+    private OffsetDateTime tokenSeguimientoExpiraEn;
+
     @PrePersist
     protected void onCreate() {
         this.fechaCreacion = OffsetDateTime.now();

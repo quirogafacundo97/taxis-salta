@@ -148,8 +148,44 @@
                 </section>
             </form>
 
+            <section id="pantalla-seguimiento"
+                    class="card pantalla-seguimiento"
+                    aria-labelledby="titulo-seguimiento"
+                    hidden>
+
+                <h2 id="titulo-seguimiento">Seguimiento de tu viaje</h2>
+
+                <p id="estado-seguimiento" role="status" aria-live="polite">
+                    Buscando chofer...
+                </p>
+
+                <div id="datos-chofer" hidden>
+                    <h3>Tu chofer</h3>
+
+                    <p>
+                        <strong>Nombre:</strong>
+                        <span id="chofer-nombre"></span>
+                    </p>
+
+                    <p>
+                        <strong>Vehículo:</strong>
+                        <span id="vehiculo-descripcion"></span>
+                    </p>
+
+                    <p>
+                        <strong>Patente:</strong>
+                        <span id="vehiculo-patente"></span>
+                    </p>
+
+                    <p>
+                        <strong>Licencia:</strong>
+                        <span id="vehiculo-licencia"></span>
+                    </p>
+                </div>
+            </section>
+
             <p id="mensaje" role="status" aria-live="polite"></p>
-        </section>
+
     </main>
 
     <footer>

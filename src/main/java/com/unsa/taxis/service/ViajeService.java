@@ -21,6 +21,8 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
 
+import com.unsa.taxis.dto.CrearViajeResponse;
+
 import org.springframework.security.core.Authentication;
 
 @Service
@@ -37,9 +39,10 @@ public class ViajeService {
     private final OfertaViajeService ofertaViajeService;
     private final ApplicationEventPublisher eventPublisher;
     private final UsuarioAutenticadoService usuarioAutenticadoService;
+    private final TokenSeguimientoService tokenSeguimientoService;
 
     @Transactional
-    public ViajeResponse crearViaje(CrearViajeRequest request) {
+    public CrearViajeResponse crearViaje(CrearViajeRequest request) {
 
         // 1. Validar y consumir el token de solicitud
         String whatsappId = tokenSolicitudViajeService
@@ -75,6 +78,9 @@ public class ViajeService {
                 tarifa
         );
 
+        TokenSeguimientoService.DatosTokenSeguimiento datosToken =
+        tokenSeguimientoService.generarToken();
+
         // 6. Crear el viaje
         Viaje viaje = Viaje.builder()
                 .cliente(cliente)
@@ -89,6 +95,8 @@ public class ViajeService {
                 .rutaGeometria(request.getRutaGeometria())
                 .distanciaMetros(request.getDistanciaMetros())
                 .duracionSegundos(request.getDuracionSegundos())
+                .tokenSeguimientoHash(datosToken.hash())
+                .tokenSeguimientoExpiraEn(datosToken.fechaExpiracion())
                 .build();
 
         // 7. Guardar el viaje
@@ -98,8 +106,26 @@ public class ViajeService {
                 new ViajeCreadoEvent(viajeGuardado.getId())
         );
 
-        //8. Retornar el dto
-        return viajeMapper.toResponse(viajeGuardado);
+        //8. Construir la respuesta con el token de seguimiento
+        ViajeResponse viajeResponse = viajeMapper.toResponse(viajeGuardado);
+
+        return CrearViajeResponse.builder()
+                .id(viajeResponse.getId())
+                .clienteNombre(viajeResponse.getClienteNombre())
+                .choferId(viajeResponse.getChoferId())
+                .choferNombre(viajeResponse.getChoferNombre())
+                .choferApellido(viajeResponse.getChoferApellido())
+                .direccionOrigen(viajeResponse.getDireccionOrigen())
+                .direccionDestino(viajeResponse.getDireccionDestino())
+                .estado(viajeResponse.getEstado())
+                .tipoTarifa(viajeResponse.getTipoTarifa())
+                .costoEstimado(viajeResponse.getCostoEstimado())
+                .rutaGeometria(viajeResponse.getRutaGeometria())
+                .distanciaMetros(viajeResponse.getDistanciaMetros())
+                .duracionSegundos(viajeResponse.getDuracionSegundos())
+                .fechaCreacion(viajeResponse.getFechaCreacion())
+                .tokenSeguimiento(datosToken.token())
+                .build();
     }
 
     public ViajeResponse buscarPorId(Long id, Authentication authentication) {

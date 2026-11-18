@@ -25,6 +25,20 @@ public class GlobalExceptionHandler {
                 .body(error);
     }
 
+    @ExceptionHandler(SeguimientoViajeNoDisponibleException.class)
+    public ResponseEntity<ErrorResponse> manejarSeguimientoViajeNoDisponible(
+                SeguimientoViajeNoDisponibleException ex) {
+
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                ex.getMessage()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(error);
+    }
+
     @ExceptionHandler(OfertaNoEncontradaException.class)
     public ResponseEntity<ErrorResponse> manejarOfertaNoEncontrada(
             OfertaNoEncontradaException ex) {

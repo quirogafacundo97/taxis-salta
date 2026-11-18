@@ -116,6 +116,11 @@ public class SecurityConfig {
 
                 .requestMatchers(
                         HttpMethod.GET,
+                        "/api/viajes/seguimiento"
+                ).permitAll()
+
+                .requestMatchers(
+                        HttpMethod.GET,
                         "/api/viajes/*"
                 ).hasAnyAuthority("ROLE_ADMIN", "ROLE_CHOFER")
 

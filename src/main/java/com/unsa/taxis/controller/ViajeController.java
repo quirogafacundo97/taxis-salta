@@ -8,10 +8,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.unsa.taxis.dto.CrearViajeResponse;
 
 import org.springframework.security.core.Authentication;
 
 import java.util.List;
+
+import com.unsa.taxis.dto.SeguimientoViajeResponse;
+import com.unsa.taxis.service.SeguimientoViajeService;
 
 @RestController
 @RequestMapping("/api/viajes")
@@ -19,16 +23,26 @@ import java.util.List;
 public class ViajeController {
 
     private final ViajeService viajeService;
+    private final SeguimientoViajeService seguimientoViajeService;
 
     @PostMapping
-    public ResponseEntity<ViajeResponse> crearViaje(
+    public ResponseEntity<CrearViajeResponse> crearViaje(
             @Valid @RequestBody CrearViajeRequest request) {
 
-        ViajeResponse viaje = viajeService.crearViaje(request);
+        CrearViajeResponse viaje = viajeService.crearViaje(request);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(viaje);
+    }
+
+    @GetMapping("/seguimiento")
+    public ResponseEntity<SeguimientoViajeResponse> consultarSeguimiento(
+            @RequestHeader("X-Token-Seguimiento") String token) {
+
+        return ResponseEntity.ok(
+                seguimientoViajeService.consultarSeguimiento(token)
+        );
     }
 
     @GetMapping("/{id}")

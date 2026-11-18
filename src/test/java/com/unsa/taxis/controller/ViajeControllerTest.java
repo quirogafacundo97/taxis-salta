@@ -29,6 +29,13 @@ import org.springframework.context.annotation.Import;
 
 import org.springframework.security.test.context.support.WithMockUser;
 
+import com.unsa.taxis.dto.CrearViajeResponse;
+
+import com.unsa.taxis.dto.SeguimientoViajeResponse;
+import com.unsa.taxis.model.EstadoViaje;
+import com.unsa.taxis.service.SeguimientoViajeService;
+import com.unsa.taxis.exception.SeguimientoViajeNoDisponibleException;
+
 @WebMvcTest(ViajeController.class)
 @Import(SecurityConfig.class)
 class ViajeControllerTest {
@@ -41,6 +48,9 @@ class ViajeControllerTest {
 
     @MockitoBean
     private ViajeService viajeService;
+
+    @MockitoBean
+    private SeguimientoViajeService seguimientoViajeService;
 
     @Test
     @WithMockUser(username = "admin", authorities = "ROLE_ADMIN")
@@ -151,7 +161,7 @@ class ViajeControllerTest {
                 .longitudDestino(-65.4105)
                 .build();
 
-        ViajeResponse respuesta = ViajeResponse.builder()
+        CrearViajeResponse respuesta = CrearViajeResponse.builder()
                 .id(1L)
                 .clienteNombre("Juan")
                 .direccionOrigen("Av. Belgrano 1234, Salta")
@@ -159,6 +169,7 @@ class ViajeControllerTest {
                 .estado(com.unsa.taxis.model.EstadoViaje.SOLICITADO)
                 .tipoTarifa(com.unsa.taxis.model.TipoTarifa.NOCTURNA)
                 .costoEstimado(new java.math.BigDecimal("1176.00"))
+                .tokenSeguimiento("tokenSeguimientoPrueba")
                 .build();
 
         when(viajeService.crearViaje(any(CrearViajeRequest.class)))
@@ -172,7 +183,52 @@ class ViajeControllerTest {
                 .andExpect(jsonPath("$.clienteNombre").value("Juan"))
                 .andExpect(jsonPath("$.estado").value("SOLICITADO"))
                 .andExpect(jsonPath("$.direccionDestino")
-                        .value("Plaza 9 de Julio, Salta"));
+                        .value("Plaza 9 de Julio, Salta"))
+                .andExpect(jsonPath("$.tokenSeguimiento")
+                        .value("tokenSeguimientoPrueba"));
        }
+
+       @Test
+       void debeConsultarSeguimientoSinAutenticacion() throws Exception {
+
+                String token = "tokenSeguimientoPrueba";
+
+                SeguimientoViajeResponse respuesta = SeguimientoViajeResponse.builder()
+                        .estado(EstadoViaje.SOLICITADO)
+                        .build();
+
+                when(seguimientoViajeService.consultarSeguimiento(token))
+                        .thenReturn(respuesta);
+
+                mockMvc.perform(get("/api/viajes/seguimiento")
+                                .header("X-Token-Seguimiento", token))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.estado").value("SOLICITADO"));
+
+                verify(seguimientoViajeService).consultarSeguimiento(token);
+        }
+
+        @Test
+        void debeRetornar404CuandoElSeguimientoNoEstaDisponible() throws Exception {
+
+                String token = "tokenInvalido";
+
+                when(seguimientoViajeService.consultarSeguimiento(token))
+                        .thenThrow(new SeguimientoViajeNoDisponibleException());
+
+                mockMvc.perform(get("/api/viajes/seguimiento")
+                                .header("X-Token-Seguimiento", token))
+                        .andExpect(status().isNotFound())
+                        .andExpect(jsonPath("$.message").value(
+                                "El seguimiento de este viaje no está disponible"
+                        ));
+        }
+
+        @Test
+        void debeRechazarConsultaDeViajeSinAutenticacion() throws Exception {
+
+                mockMvc.perform(get("/api/viajes/1"))
+                        .andExpect(status().isUnauthorized());
+        }
 
 }

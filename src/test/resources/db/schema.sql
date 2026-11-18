@@ -113,6 +113,8 @@ CREATE TABLE viajes (
     distancia_metros INTEGER,
     duracion_segundos INTEGER,
     fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    token_seguimiento_hash VARCHAR(64),
+    token_seguimiento_expira_en TIMESTAMP WITH TIME ZONE,
 
     CONSTRAINT fk_viaje_cliente
         FOREIGN KEY (cliente_id)
