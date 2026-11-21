@@ -1,8 +1,10 @@
+
 package com.unsa.taxis.service;
 
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -33,12 +35,32 @@ public class WhatsAppWebhookService {
                             obtenerLista(valor.get("statuses")).size();
                 }
 
+                Map<String, String> nombresPorRemitente = new HashMap<>();
+
+                for (Object contacto : obtenerLista(valor.get("contacts"))) {
+                    Map<String, Object> contactoMap = convertirMapa(contacto);
+                    Map<String, Object> perfil = convertirMapa(
+                            contactoMap.get("profile")
+                    );
+
+                    String whatsappId = obtenerTexto(
+                            contactoMap.get("wa_id")
+                    );
+
+                    String nombre = obtenerTexto(perfil.get("name"));
+
+                    if (whatsappId != null && nombre != null) {
+                        nombresPorRemitente.put(whatsappId, nombre);
+                    }
+                }
+
                 for (Object mensaje : obtenerLista(valor.get("messages"))) {
                     Map<String, Object> mensajeMap = convertirMapa(mensaje);
 
                     String remitente = obtenerTexto(mensajeMap.get("from"));
                     String id = obtenerTexto(mensajeMap.get("id"));
                     String tipo = obtenerTexto(mensajeMap.get("type"));
+                    String nombrePerfil = nombresPorRemitente.get(remitente);
 
                     String texto = null;
 
@@ -51,7 +73,13 @@ public class WhatsAppWebhookService {
 
                     if (remitente != null && id != null && tipo != null) {
                         mensajesEntrantes.add(
-                                new MensajeEntrante(remitente, id, tipo, texto)
+                                new MensajeEntrante(
+                                        remitente,
+                                        id,
+                                        tipo,
+                                        texto,
+                                        nombrePerfil
+                                )
                         );
                     }
                 }
@@ -73,7 +101,7 @@ public class WhatsAppWebhookService {
 
     private Map<String, Object> convertirMapa(Object valor) {
         if (valor instanceof Map<?, ?> mapa) {
-            Map<String, Object> resultado = new java.util.HashMap<>();
+            Map<String, Object> resultado = new HashMap<>();
 
             mapa.forEach((clave, contenido) -> {
                 if (clave instanceof String textoClave) {
@@ -96,7 +124,8 @@ public class WhatsAppWebhookService {
             String remitente,
             String id,
             String tipo,
-            String texto) {
+            String texto,
+            String nombrePerfil) {
     }
 
     public record ResultadoNotificacion(

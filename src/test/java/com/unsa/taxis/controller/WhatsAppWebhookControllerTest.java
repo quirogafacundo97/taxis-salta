@@ -62,7 +62,8 @@ class WhatsAppWebhookControllerTest {
                         "5493870000000",
                         "wamid.prueba",
                         "text",
-                        "Quiero un taxi"
+                        "Quiero un taxi",
+                        null
                 );
 
         when(whatsAppWebhookService.procesarNotificacion(anyMap()))

@@ -21,6 +21,14 @@ class WhatsAppWebhookServiceTest {
                                         Map.of(
                                                 "field", "messages",
                                                 "value", Map.of(
+                                                        "contacts", java.util.List.of(
+                                                                Map.of(
+                                                                        "wa_id", "5493870000000",
+                                                                        "profile", Map.of(
+                                                                                "name", "Juan Pérez"
+                                                                        )
+                                                                )
+                                                        ),
                                                         "messages", java.util.List.of(
                                                                 Map.of(
                                                                         "from", "5493870000000",
@@ -48,6 +56,10 @@ class WhatsAppWebhookServiceTest {
         assertEquals(
                 "Hola, necesito un taxi",
                 resultado.mensajesEntrantes().get(0).texto()
+        );
+        assertEquals(
+                "Juan Pérez",
+                resultado.mensajesEntrantes().get(0).nombrePerfil()
         );
         assertEquals(0, resultado.notificacionesEstado());
     }
@@ -90,4 +102,6 @@ class WhatsAppWebhookServiceTest {
         assertTrue(resultado.mensajesEntrantes().isEmpty());
         assertEquals(0, resultado.notificacionesEstado());
     }
+
+    
 }

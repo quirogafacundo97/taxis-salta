@@ -1,15 +1,21 @@
 
 package com.unsa.taxis.service;
 
+import com.unsa.taxis.exception.TransicionEstadoViajeException;
+import com.unsa.taxis.model.Cliente;
+import com.unsa.taxis.repository.ClienteRepository;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-import com.unsa.taxis.exception.TransicionEstadoViajeException;
-
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 
 class WhatsAppConversacionServiceTest {
 
@@ -18,8 +24,8 @@ class WhatsAppConversacionServiceTest {
         WhatsAppService whatsAppService = mock(WhatsAppService.class);
         TokenSolicitudViajeService tokenService =
                 mock(TokenSolicitudViajeService.class);
-
         ViajeService viajeService = mock(ViajeService.class);
+        ClienteRepository clienteRepository = mock(ClienteRepository.class);
 
         when(tokenService.generarToken("5493870000000"))
                 .thenReturn("tokenPrueba123");
@@ -29,6 +35,7 @@ class WhatsAppConversacionServiceTest {
                         whatsAppService,
                         viajeService,
                         tokenService,
+                        clienteRepository,
                         "http://localhost:3000"
                 );
 
@@ -37,7 +44,8 @@ class WhatsAppConversacionServiceTest {
                         "5493870000000",
                         "wamid.TEST123",
                         "text",
-                        "Quiero un taxi"
+                        "Quiero un taxi",
+                        null
                 );
 
         conversacionService.procesarMensaje(mensaje);
@@ -56,14 +64,15 @@ class WhatsAppConversacionServiceTest {
         WhatsAppService whatsAppService = mock(WhatsAppService.class);
         TokenSolicitudViajeService tokenService =
                 mock(TokenSolicitudViajeService.class);
-
         ViajeService viajeService = mock(ViajeService.class);
+        ClienteRepository clienteRepository = mock(ClienteRepository.class);
 
         WhatsAppConversacionService conversacionService =
                 new WhatsAppConversacionService(
                         whatsAppService,
                         viajeService,
                         tokenService,
+                        clienteRepository,
                         "http://localhost:3000"
                 );
 
@@ -72,7 +81,8 @@ class WhatsAppConversacionServiceTest {
                         "5493870000000",
                         "wamid.TEST124",
                         "text",
-                        "¿Cómo funciona el servicio?"
+                        "¿Cómo funciona el servicio?",
+                        null
                 );
 
         conversacionService.procesarMensaje(mensaje);
@@ -88,14 +98,15 @@ class WhatsAppConversacionServiceTest {
         WhatsAppService whatsAppService = mock(WhatsAppService.class);
         TokenSolicitudViajeService tokenService =
                 mock(TokenSolicitudViajeService.class);
-
         ViajeService viajeService = mock(ViajeService.class);
+        ClienteRepository clienteRepository = mock(ClienteRepository.class);
 
         WhatsAppConversacionService conversacionService =
                 new WhatsAppConversacionService(
                         whatsAppService,
                         viajeService,
                         tokenService,
+                        clienteRepository,
                         "http://localhost:3000"
                 );
 
@@ -104,6 +115,7 @@ class WhatsAppConversacionServiceTest {
                         "5493870000000",
                         "wamid.TEST125",
                         "image",
+                        null,
                         null
                 );
 
@@ -117,17 +129,18 @@ class WhatsAppConversacionServiceTest {
 
     @Test
     void debeCancelarElViajeCuandoElPasajeroLoSolicitaPorWhatsApp() {
-
         WhatsAppService whatsAppService = mock(WhatsAppService.class);
         TokenSolicitudViajeService tokenService =
                 mock(TokenSolicitudViajeService.class);
         ViajeService viajeService = mock(ViajeService.class);
+        ClienteRepository clienteRepository = mock(ClienteRepository.class);
 
         WhatsAppConversacionService conversacionService =
                 new WhatsAppConversacionService(
                         whatsAppService,
                         viajeService,
                         tokenService,
+                        clienteRepository,
                         "http://localhost:3000"
                 );
 
@@ -136,7 +149,8 @@ class WhatsAppConversacionServiceTest {
                         "5493870000000",
                         "wamid.TEST126",
                         "text",
-                        "Cancelar"
+                        "Cancelar",
+                        null
                 );
 
         conversacionService.procesarMensaje(mensaje);
@@ -147,15 +161,15 @@ class WhatsAppConversacionServiceTest {
                 "5493870000000",
                 "Tu viaje fue cancelado correctamente."
         );
-     }
+    }
 
-     @Test
-     void debeInformarCuandoNoSePuedeCancelarElViaje() {
-
+    @Test
+    void debeInformarCuandoNoSePuedeCancelarElViaje() {
         WhatsAppService whatsAppService = mock(WhatsAppService.class);
         TokenSolicitudViajeService tokenService =
                 mock(TokenSolicitudViajeService.class);
         ViajeService viajeService = mock(ViajeService.class);
+        ClienteRepository clienteRepository = mock(ClienteRepository.class);
 
         doThrow(new TransicionEstadoViajeException(
                 "No se puede cancelar el viaje porque ya fue aceptado o está en curso."
@@ -166,6 +180,7 @@ class WhatsAppConversacionServiceTest {
                         whatsAppService,
                         viajeService,
                         tokenService,
+                        clienteRepository,
                         "http://localhost:3000"
                 );
 
@@ -174,7 +189,8 @@ class WhatsAppConversacionServiceTest {
                         "5493870000000",
                         "wamid.TEST127",
                         "text",
-                        "Cancelar"
+                        "Cancelar",
+                        null
                 );
 
         conversacionService.procesarMensaje(mensaje);
@@ -185,5 +201,133 @@ class WhatsAppConversacionServiceTest {
                 "5493870000000",
                 "No se puede cancelar el viaje porque ya fue aceptado o está en curso."
         );
-     }
+    }
+
+    @Test
+    void debeGuardarElNombreDelPerfilCuandoElClienteNoExiste() {
+        WhatsAppService whatsAppService = mock(WhatsAppService.class);
+        TokenSolicitudViajeService tokenService =
+                mock(TokenSolicitudViajeService.class);
+        ViajeService viajeService = mock(ViajeService.class);
+        ClienteRepository clienteRepository = mock(ClienteRepository.class);
+
+        when(clienteRepository.findByWhatsappId("5493870000000"))
+                .thenReturn(Optional.empty());
+
+        WhatsAppConversacionService conversacionService =
+                new WhatsAppConversacionService(
+                        whatsAppService,
+                        viajeService,
+                        tokenService,
+                        clienteRepository,
+                        "http://localhost:3000"
+                );
+
+        WhatsAppWebhookService.MensajeEntrante mensaje =
+                new WhatsAppWebhookService.MensajeEntrante(
+                        "5493870000000",
+                        "wamid.TEST128",
+                        "text",
+                        "Hola",
+                        "Juan Pérez"
+                );
+
+        conversacionService.procesarMensaje(mensaje);
+
+        ArgumentCaptor<Cliente> clienteCaptor =
+                ArgumentCaptor.forClass(Cliente.class);
+
+        verify(clienteRepository).save(clienteCaptor.capture());
+
+        assertEquals(
+                "5493870000000",
+                clienteCaptor.getValue().getWhatsappId()
+        );
+        assertEquals(
+                "Juan Pérez",
+                clienteCaptor.getValue().getNombre()
+        );
+        }
+        
+        @Test
+        void debeConservarElNombreExistenteDelCliente() {
+                WhatsAppService whatsAppService = mock(WhatsAppService.class);
+                TokenSolicitudViajeService tokenService =
+                        mock(TokenSolicitudViajeService.class);
+                ViajeService viajeService = mock(ViajeService.class);
+                ClienteRepository clienteRepository = mock(ClienteRepository.class);
+
+                Cliente clienteExistente = Cliente.builder()
+                        .whatsappId("5493870000000")
+                        .nombre("Juan Quiroga")
+                        .build();
+
+                when(clienteRepository.findByWhatsappId("5493870000000"))
+                        .thenReturn(Optional.of(clienteExistente));
+
+                WhatsAppConversacionService conversacionService =
+                        new WhatsAppConversacionService(
+                                whatsAppService,
+                                viajeService,
+                                tokenService,
+                                clienteRepository,
+                                "http://localhost:3000"
+                        );
+
+                WhatsAppWebhookService.MensajeEntrante mensaje =
+                        new WhatsAppWebhookService.MensajeEntrante(
+                                "5493870000000",
+                                "wamid.TEST129",
+                                "text",
+                                "Hola",
+                                "Juan Pérez"
+                        );
+
+                conversacionService.procesarMensaje(mensaje);
+
+                assertEquals("Juan Quiroga", clienteExistente.getNombre());
+
+                verify(clienteRepository, never()).save(any(Cliente.class));
+        }
+
+        @Test
+        void debeCompletarElNombreCuandoElClienteExistenteNoLoTiene() {
+                WhatsAppService whatsAppService = mock(WhatsAppService.class);
+                TokenSolicitudViajeService tokenService =
+                        mock(TokenSolicitudViajeService.class);
+                ViajeService viajeService = mock(ViajeService.class);
+                ClienteRepository clienteRepository = mock(ClienteRepository.class);
+
+                Cliente clienteExistente = Cliente.builder()
+                        .whatsappId("5493870000000")
+                        .nombre(null)
+                        .build();
+
+                when(clienteRepository.findByWhatsappId("5493870000000"))
+                        .thenReturn(Optional.of(clienteExistente));
+
+                WhatsAppConversacionService conversacionService =
+                        new WhatsAppConversacionService(
+                                whatsAppService,
+                                viajeService,
+                                tokenService,
+                                clienteRepository,
+                                "http://localhost:3000"
+                        );
+
+                WhatsAppWebhookService.MensajeEntrante mensaje =
+                        new WhatsAppWebhookService.MensajeEntrante(
+                                "5493870000000",
+                                "wamid.TEST130",
+                                "text",
+                                "Hola",
+                                "Juan Pérez"
+                        );
+
+                conversacionService.procesarMensaje(mensaje);
+
+                assertEquals("Juan Pérez", clienteExistente.getNombre());
+
+                verify(clienteRepository).save(clienteExistente);
+   }
 }

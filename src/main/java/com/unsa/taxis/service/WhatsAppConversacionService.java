@@ -1,13 +1,14 @@
 
 package com.unsa.taxis.service;
 
+import com.unsa.taxis.exception.TransicionEstadoViajeException;
+import com.unsa.taxis.model.Cliente;
+import com.unsa.taxis.repository.ClienteRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.text.Normalizer;
 import java.util.Locale;
-
-import com.unsa.taxis.exception.TransicionEstadoViajeException;
 
 @Service
 public class WhatsAppConversacionService {
@@ -16,16 +17,19 @@ public class WhatsAppConversacionService {
     private final ViajeService viajeService;
     private final String urlPaginaPasajero;
     private final TokenSolicitudViajeService tokenSolicitudViajeService;
+    private final ClienteRepository clienteRepository;
 
     public WhatsAppConversacionService(
             WhatsAppService whatsAppService,
             ViajeService viajeService,
             TokenSolicitudViajeService tokenSolicitudViajeService,
+            ClienteRepository clienteRepository,
             @Value("${app.pasajero.url}") String urlPaginaPasajero) {
 
         this.whatsAppService = whatsAppService;
         this.viajeService = viajeService;
         this.tokenSolicitudViajeService = tokenSolicitudViajeService;
+        this.clienteRepository = clienteRepository;
         this.urlPaginaPasajero = urlPaginaPasajero;
     }
 
@@ -35,6 +39,8 @@ public class WhatsAppConversacionService {
         if (mensaje == null || mensaje.remitente() == null) {
             return;
         }
+
+        guardarNombrePerfil(mensaje);
 
         if (!"text".equals(mensaje.tipo())
                 || mensaje.texto() == null
@@ -98,6 +104,34 @@ public class WhatsAppConversacionService {
                 mensaje.remitente(),
                 "Para solicitar un viaje, escribí «Quiero un taxi» y te comparto el enlace para indicar el origen y el destino."
         );
+    }
+
+    private void guardarNombrePerfil(
+            WhatsAppWebhookService.MensajeEntrante mensaje) {
+
+        String nombre = mensaje.nombrePerfil();
+
+        if (nombre == null || nombre.isBlank()) {
+            return;
+        }
+
+        nombre = nombre.trim();
+
+        // La columna Cliente.nombre admite hasta 100 caracteres.
+        if (nombre.length() > 100) {
+            nombre = nombre.substring(0, 100);
+        }
+
+        Cliente cliente = clienteRepository
+                .findByWhatsappId(mensaje.remitente())
+                .orElseGet(() -> Cliente.builder()
+                        .whatsappId(mensaje.remitente())
+                        .build());
+
+        if (cliente.getNombre() == null || cliente.getNombre().isBlank()) {
+            cliente.setNombre(nombre);
+            clienteRepository.save(cliente);
+        }
     }
 
     private String normalizarTexto(String texto) {
