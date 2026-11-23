@@ -143,6 +143,23 @@ public class SecurityConfig {
                         "/api/choferes/*/estado"
                 ).hasAuthority("ROLE_CHOFER")
 
+                // Gestión de propietarios
+                .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/propietarios",
+                        "/api/propietarios/**"
+                ).hasAuthority("ROLE_ADMIN")
+
+                .requestMatchers(
+                        HttpMethod.POST,
+                        "/api/propietarios"
+                ).hasAuthority("ROLE_ADMIN")
+
+                .requestMatchers(
+                        HttpMethod.PUT,
+                        "/api/propietarios/**"
+                ).hasAuthority("ROLE_ADMIN")
+
                 // Consultas generales de choferes
                 .requestMatchers(
                         HttpMethod.GET,

@@ -8,4 +8,5 @@ import java.util.Optional;
 @Repository
 public interface PropietarioRepository extends JpaRepository<Propietario, Long> {
     Optional<Propietario> findByDni(String dni);
+    boolean existsByDni(String dni);
 }

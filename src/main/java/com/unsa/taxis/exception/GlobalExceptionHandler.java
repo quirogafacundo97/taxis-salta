@@ -161,4 +161,32 @@ public class GlobalExceptionHandler {
                 .body(error);
     }
 
+    @ExceptionHandler(PropietarioNoEncontradoException.class)
+    public ResponseEntity<ErrorResponse> manejarPropietarioNoEncontrado(
+            PropietarioNoEncontradoException ex) {
+
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                ex.getMessage()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(error);
+    }
+
+    @ExceptionHandler(DniPropietarioDuplicadoException.class)
+    public ResponseEntity<ErrorResponse> manejarDniPropietarioDuplicado(
+            DniPropietarioDuplicadoException ex) {
+
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                ex.getMessage()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(error);
+    }
+
 }
