@@ -16,6 +16,7 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -33,6 +34,7 @@ import java.util.List;
 import org.springframework.http.HttpMethod;
 
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     @Value("${app.security.jwt.secret}")
@@ -165,6 +167,12 @@ public class SecurityConfig {
                         HttpMethod.GET,
                         "/api/choferes",
                         "/api/choferes/**"
+                ).hasAuthority("ROLE_ADMIN")
+
+                // Gestión de usuarios
+                .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/usuarios"
                 ).hasAuthority("ROLE_ADMIN")
 
                 // Todo lo demás queda bloqueado
