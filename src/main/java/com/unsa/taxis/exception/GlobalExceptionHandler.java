@@ -189,4 +189,61 @@ public class GlobalExceptionHandler {
                 .body(error);
     }
 
+
+    @ExceptionHandler(VehiculoNoEncontradoException.class)
+    public ResponseEntity<ErrorResponse> manejarVehiculoNoEncontrado(
+            VehiculoNoEncontradoException ex) {
+
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                ex.getMessage()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(error);
+    }
+
+    @ExceptionHandler(PatenteVehiculoDuplicadaException.class)
+    public ResponseEntity<ErrorResponse> manejarPatenteVehiculoDuplicada(
+            PatenteVehiculoDuplicadaException ex) {
+
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                ex.getMessage()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(error);
+    }
+
+    @ExceptionHandler(LicenciaVehiculoDuplicadaException.class)
+    public ResponseEntity<ErrorResponse> manejarLicenciaVehiculoDuplicada(
+            LicenciaVehiculoDuplicadaException ex) {
+
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                ex.getMessage()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(error);
+    }
+
+    @ExceptionHandler(NroRelojFullmarDuplicadoException.class)
+    public ResponseEntity<ErrorResponse> manejarNroRelojFullmarDuplicado(
+            NroRelojFullmarDuplicadoException ex) {
+
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                ex.getMessage()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(error);
+    }
+
 }
